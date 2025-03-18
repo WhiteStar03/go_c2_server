@@ -93,3 +93,16 @@ func CreateImplant(userID int) (*models.Implant, error) {
 	return &implant, nil
 
 }
+
+// GetCommandsByImplantID returns all commands for a specific implant.
+func GetCommandsByImplantID(implantID string) ([]models.Command, error) {
+	var commands []models.Command
+
+	// Fetch all commands for the implant
+	result := config.DB.Where("implant_id = ?", implantID).Find(&commands)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return commands, nil
+}

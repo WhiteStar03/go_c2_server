@@ -10,4 +10,5 @@ type Command struct {
 	Status    string    `json:"status" gorm:"size:50"`            // Status of the command (e.g., "pending", "executed")
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"` // Timestamp when the command was created
 	UpdatedAt time.Time `json:"updated_at" gorm:"autoUpdateTime"` // Timestamp when the command was last updated
+	Output    string    `json:"output" gorm:"type:text"`          // Output of the command
 }

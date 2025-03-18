@@ -12,7 +12,9 @@ func SetupRouter() *gin.Engine {
 	// Public routes
 	r.POST("/register", controllers.Register)
 	r.POST("/login", controllers.Login)
-	r.POST("/checkin", controllers.CheckinImplant) // Implant check-in
+	r.POST("/checkin", controllers.CheckinImplant)                             // Implant check-in
+	r.GET("/implants/:implant_id/commands", controllers.GetCommandsForImplant) // Get all commands for a specific implant
+	r.POST("/command-result", controllers.HandleCommandResult)
 
 	// Protected routes
 	protected := r.Group("/api")
@@ -24,6 +26,7 @@ func SetupRouter() *gin.Engine {
 		protected.POST("/send-command", controllers.SendCommand) // Send a command to a specific implant
 		protected.POST("/command-result", controllers.HandleCommandResult)
 		protected.GET("/commands", controllers.GetCommandsForImplant)
+		protected.GET("/implants/:implant_id/commands", controllers.GetCommandsForImplant) // Get all commands for a specific implant
 
 	}
 
