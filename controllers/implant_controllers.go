@@ -208,3 +208,28 @@ func CheckinImplant(c *gin.Context) {
 		"last_seen": implant.LastSeen,
 	})
 }
+
+func DeleteImplant(c *gin.Context) {
+	// Extract the implant unique token from the URL
+	uniqueToken := c.Param("implant_id")
+
+	// Ensure the user is authenticated
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// Find the implant by unique token and ensure it belongs to the user
+	var implant models.Implant
+	result := config.DB.Where("unique_token = ? AND user_id = ?", uniqueToken, userID).First(&implant)
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found or unauthorized"})
+		return
+	}
+
+	// Delete the implant
+	config.DB.Delete(&implant)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Implant deleted successfully"})
+}

