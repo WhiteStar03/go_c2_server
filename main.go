@@ -17,7 +17,6 @@ const (
 
 func main() {
 	config.ConnectDatabase()
-
 	go monitorImplantStatuses()
 
 	// ✅ Initialize Gin Router (Fix: Don't overwrite the router)
