@@ -2,7 +2,6 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/c2client" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/implants/rust/learn/rustlings" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/implants/rust/rustlings" vcs="Git" />
   </component>

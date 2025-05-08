@@ -6,9 +6,11 @@ services:
     container_name: c2_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: c2user
-      POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: c2server
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: c2user
+      DB_PASSWORD: mysecretpassword
+      DB_NAME: c2server
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:

