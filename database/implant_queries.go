@@ -61,12 +61,13 @@ func MarkCommandAsExecuted(commandID int, output string) error {
 	return nil
 }
 
-func CreateImplant(userID int) (*models.Implant, error) {
+func CreateImplant(userID int, targetOS string) (*models.Implant, error) {
 	uniqueToken := uuid.New().String()
 	implant := models.Implant{
 		UserID:      userID,
 		UniqueToken: uniqueToken,
-		Status:      "new", // Initial status
+		Status:      "new",    // Initial status
+		TargetOS:    targetOS, // Save the target OS
 		Deployed:    false,
 		LastSeen:    time.Now(), // Set initial last_seen
 		IPAddress:   "",

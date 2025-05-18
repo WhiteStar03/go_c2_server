@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 services:
   db:
@@ -6,33 +6,55 @@ services:
     container_name: c2_db
     restart: unless-stopped
     environment:
-      DB_HOST: db
-      DB_PORT: "5432"
-      DB_USER: c2user
-      DB_PASSWORD: mysecretpassword
-      DB_NAME: c2server
-    volumes:
-      - db_data:/var/lib/postgresql/data
+      # These are for PostgreSQL image initialization
+      POSTGRES_USER: c2user
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: c2server
+      # DB_HOST and DB_PORT are not needed here for the postgres container itself
     ports:
       - "5432:5432"
+    networks:
+      - app-network
+    volumes: # Good practice to add a volume for persistence
+      - pgdata:/var/lib/postgresql/data
 
-  app:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: c2_app
+    container_name: go-backend
     restart: unless-stopped
-    depends_on:
+    depends_on: # Ensure db starts before backend (though app should still handle connection retries)
       - db
-    ports:
-      - "8080:8080"
     environment:
-      # these should match what config.ConnectDatabase reads
+      # These are for your Go application to connect to the DB
       DB_HOST: db
       DB_PORT: "5432"
       DB_USER: c2user
       DB_PASSWORD: mysecretpassword
       DB_NAME: c2server
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
 
-volumes:
-  db_data:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: react-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://backend:8080
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes: # Define the named volume
+  pgdata:
