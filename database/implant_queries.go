@@ -11,7 +11,7 @@ import (
 // GetImplantsByUserID returns all implants owned by a specific user.
 func GetImplantsByUserID(userID int) ([]models.Implant, error) {
 	var implants []models.Implant
-	result := config.DB.Where("user_id = ?", userID).Order("last_seen desc").Find(&implants) // Order by last_seen
+	result := config.DB.Omit("ID").Where("user_id = ?", userID).Order("last_seen desc").Find(&implants) // Order by last_seen
 	if result.Error != nil {
 		return nil, result.Error
 	}

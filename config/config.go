@@ -3,10 +3,11 @@ package config
 import (
 	"awesomeProject/models"
 	"fmt"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"log"
 	"os"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
@@ -29,6 +30,7 @@ func ConnectDatabase() {
 		&models.User{},
 		&models.Implant{},
 		&models.Command{},
+		&models.ScreenshotInfo{},
 	); err != nil {
 		panic("failed to migrate database: " + err.Error())
 	}
