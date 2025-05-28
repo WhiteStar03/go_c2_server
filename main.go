@@ -5,8 +5,9 @@ import (
 	"awesomeProject/database"
 	"awesomeProject/routes"
 	"fmt"
-	"github.com/gin-contrib/cors"
 	"time"
+
+	"github.com/gin-contrib/cors"
 )
 
 const (

