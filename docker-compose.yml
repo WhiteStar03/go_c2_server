@@ -37,6 +37,9 @@ services:
       - "8080:8080"
     networks:
       - app-network
+    volumes:
+      # Mount the local binaries directory to the container
+      - ./binaries:/app/binaries:ro  # ro = read-only for security
 
   frontend:
     build:

@@ -8,9 +8,16 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY . .
+# Copy source code (exclude binaries directory)
+COPY config/ ./config/
+COPY controllers/ ./controllers/
+COPY database/ ./database/
+COPY middleware/ ./middleware/
+COPY models/ ./models/
+COPY routes/ ./routes/
+COPY main.go .
 
-# Assuming main.go is at the root of the go_backend directory
+# Build the Go application
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app/server .
 
 # Stage 2: Create the final small image
@@ -20,6 +27,9 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 COPY --from=builder /app/server .
-COPY --from=builder /app/binaries ./binaries
+
+# Create binaries directory that will be mounted as volume
+RUN mkdir -p /app/binaries
+
 EXPOSE 8080
 CMD ["./server"]

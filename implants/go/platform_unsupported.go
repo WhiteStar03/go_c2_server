@@ -19,7 +19,7 @@ func init() {
 	}
 
 	if doSelfDelete == nil {
-		doSelfDelete = func(exePath string) {
+		doSelfDelete = func(selfExePath string, originalLauncherPath string) {
 			// No-op or log: Self-delete not implemented for this platform
 		}
 	}

