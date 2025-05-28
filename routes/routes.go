@@ -1,4 +1,4 @@
-// awesomeProject/routes/routes.go
+// Package routes awesomeProject/routes/routes.go
 package routes
 
 import (

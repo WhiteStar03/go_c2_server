@@ -41,8 +41,24 @@ const FullScreenExitIcon = () => (
 );
 
 
-const C2_IMAGE_BASE_URL = 'http://localhost:8080';
+let determinedImageBaseUrl;
 
+if (typeof window !== 'undefined') { // Ensure this code runs only in the browser
+  const protocol = window.location.protocol; // "http:" or "https:"
+  const hostname = window.location.hostname; // The IP or domain name used in the browser's address bar
+  const imageServerPort = 8080; // Your C2 image server port
+
+  // If the hostname is 'localhost', you might still want to use 'localhost' for the image server
+  // or explicitly use the IP if you know you'll always access it via IP from other devices.
+  // For general use when accessing via IP from another machine, hostname will be that IP.
+  determinedImageBaseUrl = `${protocol}//${hostname}:${imageServerPort}`;
+} else {
+  // Fallback for server-side rendering or environments where window is not defined
+  // This might not be strictly necessary for CRA/Vite client-side apps but is good practice.
+  determinedImageBaseUrl = 'http://localhost:8080';
+}
+
+const C2_IMAGE_BASE_URL = process.env.REACT_APP_C2_IMAGE_BASE_URL || process.env.VITE_C2_IMAGE_BASE_URL || determinedImageBaseUrl;
 function ScreenshotViewer({
   isOpen,
   onClose,

