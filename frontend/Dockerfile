@@ -1,21 +1,21 @@
-# 1) Build stage
-FROM node:18-alpine AS build
+# Single stage build - serve with Node.js
+FROM node:18-alpine
 
-# set working dir
 WORKDIR /app
 
-# install dependencies
+# Install serve globally to serve the React build
+RUN npm install -g serve
+
+# Copy package files and install dependencies
 COPY package*.json ./
 RUN npm ci
 
-# copy source and build
+# Copy source and build
 COPY . .
 RUN npm run build
 
+# Expose port 3000
+EXPOSE 3000
 
-FROM nginx:stable-alpine
-RUN rm -rf /usr/share/nginx/html/*
-COPY --from=build /app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Serve the build folder
+CMD ["serve", "-s", "build", "-l", "3000"]

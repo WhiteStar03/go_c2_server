@@ -1,0 +1,66 @@
+\chapter{Background and Terminology}
+\label{chap:background}
+
+This chapter introduces fundamental concepts and terminology essential for understanding the domain of Command-and-Control frameworks and threat emulation.
+
+\section{Command-and-Control (C2/C\&C)}
+\label{sec:c2_definition}
+A Command-and-Control (C2 or C\&C) server is a centralized computer or system managed by an attacker (or, in ethical contexts, a security researcher/red teamer). Its primary purpose is to maintain communication with compromised systems, known as \textit{implants} or \textit{agents}, within a target network. Through the C2 channel, operators can send commands to implants, receive data, and orchestrate activities on the compromised hosts. The MITRE ATT\&CK framework lists Command and Control (TA0011) as a critical tactic used by adversaries \cite{mitreATTACK_C2}.
+
+\section{Implant / Agent / Beacon}
+\label{sec:implant_definition}
+An \textit{implant} (also referred to as an agent, beacon, bot, or backdoor) is a malicious (or emulated malicious) program installed on a target system. Once active, the implant establishes a connection back to the C2 server, allowing the operator to remotely control the system. Key characteristics often include:
+\begin{itemize}
+    \item \textbf{Beaconing:} Periodically contacting the C2 server to check for new tasks or send status updates. The implant developed in this thesis performs check-ins every 5 seconds.
+    \item \textbf{Task Execution:} Receiving and executing commands from the C2 server, such as running shell commands, manipulating files, or gathering system information.
+    \item \textbf{Stealth:} Employing techniques to avoid detection by security software and analysts.
+\end{itemize}
+In this project, implants are developed in Go for cross-platform compatibility and performance.
+
+\section{Payload}
+\label{sec:payload_definition}
+A \textit{payload} is the component of malware (or an emulation tool) that performs the intended malicious action. This can range from data exfiltration, encrypting files (ransomware), to establishing a persistent backdoor. In the context of C2 frameworks, the implant itself can be considered the primary payload delivered after initial access. The C2 server in this thesis facilitates the generation and configuration of these Go-based implant payloads.
+
+\section{Threat Emulation vs. Penetration Testing}
+\label{sec:emulation_vs_pentest}
+While related, these terms have distinct meanings:
+\textcolor{red}{descrioption}
+\begin{itemize}
+    \item \textbf{Penetration Testing:} Typically focuses on identifying and exploiting vulnerabilities to gain access, often with a broad scope and less emphasis on mimicking specific adversaries.
+    \item \textbf{Threat Emulation (or Adversary Emulation):} A more targeted approach that seeks to replicate the specific Tactics, Techniques, and Procedures (TTPs) of known threat actors or attack scenarios. This project aims to provide a tool for threat emulation.
+\end{itemize}
+
+\section{Common C2 Communication Channels}
+\label{sec:c2_channels}
+Attackers use various protocols for C2 communication, often choosing common ones to blend in with legitimate traffic:
+\begin{itemize}
+    \item \textbf{HTTP/HTTPS:} Widely used due to its prevalence. The C2 framework in this thesis primarily uses HTTP for communication between implants and the server.
+    \item \textbf{DNS:} Can be used for C2 by encoding data in DNS queries and responses.
+    \item \textbf{ICMP:} Another common protocol that can be abused for covert channels.
+    \item \textbf{Social Media/Cloud Services:} Abusing legitimate platforms like Twitter, Gmail, Dropbox, etc.
+\end{itemize}
+
+\section{Evasion Techniques}
+\label{sec:evasion_techniques_intro}
+These are methods used by malware and C2 implants to avoid detection by antivirus (AV) software, Endpoint Detection and Response (EDR) solutions, and security analysts. This thesis explores basic evasion techniques such as:
+\begin{itemize}
+    \item \textbf{Daemonization/Backgrounding:} Running the implant as a background process without a visible window or console. Your implant uses `relaunchAsDaemonInternal`.
+    \item \textbf{Self-Deletion:} Removing the initial launcher or the implant binary from disk after execution to reduce forensic artifacts. Your implant implements `doSelfDelete`.
+    \item \textbf{Process Name Spoofing/Masquerading:} Renaming the implant process to mimic a legitimate system process. Your Linux implant uses `prctl` and argv[0] manipulation.
+    \item \textbf{In-Memory Execution:} Techniques to load and run code directly in memory without writing to disk (partially achieved by your Linux implant's copy-to-temp, exec, unlink).
+    % \item \textbf{API Unhooking:} (Mentioned as future work) Restoring original API functions that EDRs might have hooked for monitoring.
+    % \item \textbf{Process Injection:} (Mentioned as future work) Injecting malicious code into legitimate processes.
+\end{itemize}
+The MITRE ATT\&CK framework extensively documents Defense Evasion (TA0005) techniques \cite{mitreATTACK_DefenseEvasion}.
+
+\section{MITRE ATT\&CK Framework}
+\label{sec:mitre_attack}
+The MITRE ATT\&CK\textsuperscript{\textregistered} framework is a globally accessible knowledge base of adversary tactics and techniques based on real-world observations. It is widely used by cybersecurity professionals for threat modeling, detection engineering, and improving security posture. This thesis aligns with several ATT\&CK tactics, primarily:
+\begin{itemize}
+    \item \textbf{Execution (TA0002):} e.g., Scheduled Task/Job (T1053), Command and Scripting Interpreter (T1059).
+    \item \textbf{Persistence (TA0003):} e.g., Create or Modify System Process (T1543) through daemonization.
+    \item \textbf{Defense Evasion (TA0005):} e.g., Masquerading (T1036), File Deletion (T1070.004).
+    \item \textbf{Discovery (TA0007):} e.g., File and Directory Discovery (T1083), System Information Discovery (T1082).
+    \item \textbf{Collection (TA0009):} e.g., Screen Capture (T1113).
+    \item \textbf{Command and Control (TA0011):} e.g., Application Layer Protocol (T1071 - Web Protocols for your HTTP C2).
+\end{itemize}

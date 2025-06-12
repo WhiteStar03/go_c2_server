@@ -120,8 +120,6 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
     } catch (err) {
       console.error(`Error sending download command:`, err);
       if (isMountedRef.current) {
-        // setError(`Download request failed: ${err.message}`); // Avoid overwriting directory error
-        // setIsInitiallyLoading(false); // Only if set true above
         displayNotification(`Download request for ${fileNameForDownload} failed: ${err.message}`, "error");
       }
     }
@@ -138,7 +136,7 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!isMountedRef.current) return;
-      if (!res.ok) { /* Handle network error during poll if needed, maybe retry */ return; }
+      if (!res.ok) { return; }
 
       const data = await res.json();
       const cmd = data.commands?.find(c => c.id === cmdIdToPoll);

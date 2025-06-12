@@ -1,4 +1,3 @@
-// Package models awesomeProject/models/fs_entry.go
 package models
 
 import "time"

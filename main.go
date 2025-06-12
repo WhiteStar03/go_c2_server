@@ -19,10 +19,10 @@ func main() {
 	config.ConnectDatabase()
 	go monitorImplantStatuses()
 
-	// Get the configured router with all routes
+	// router with all routes
 	r := routes.SetupRouter()
 
-	// Apply CORS Middleware to the main router
+	// Apply CORS Middleware 
 	r.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -32,7 +32,6 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Start the server
 	fmt.Println("Server running on port 8080")
 	r.Run(":8080")
 }

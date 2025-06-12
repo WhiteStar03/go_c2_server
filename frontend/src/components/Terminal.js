@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from "react";
+import API_CONFIG from '../config/api';
 // import ScreenshotViewer from './ScreenshotViewer'; // Import the new component
 
 // API_BASE and CloseIcon remain the same from your provided code
 
-const API_BASE = "/api";
+const API_BASE = API_CONFIG.API_BASE;
 const CloseIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"

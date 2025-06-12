@@ -1,0 +1,415 @@
+% --- Foundational C2 & Malware Concepts ---
+@book{sikorski2012practical,
+  title={Practical Malware Analysis: The Hands-On Guide to Dissecting Malicious Software},
+  author={Sikorski, Michael and Honig, Andrew},
+  year={2012},
+  publisher={No Starch Press},
+  isbn={978-1593272906}
+}
+
+@book{harley2011viruses,
+  title={Viruses, Malware, and a Little C{\#}?: A Little C{\#} and Viruses},
+  author={Harley, David and Slade, Robert and Gattiker, Urs E.},
+  year={2011},
+  publisher={Auerbach Publications},
+  isbn={978-1439840773}
+}
+
+@article{alrabaei2016dga,
+  title={{DGA-Based Malware: A Survey}},
+  author={Alrabaei, Abdullah and Saleem, Khurram and Zardari, Sheeraz and Aslam, Muhammad and Aslam, Bilal},
+  journal={Journal of Network and Computer Applications},
+  volume={60},
+  pages={76--91},
+  year={2016},
+  publisher={Elsevier}
+}
+
+@article{mcLaughlin2016comprehensive,
+  title={A Comprehensive Approach to Modern Malware Analysis},
+  author={McLaughlin, Niall and Brumley, David and Poosankam, Periwinkle},
+  journal={Communications of the ACM},
+  volume={59},
+  number={5},
+  pages={84--92},
+  year={2016},
+  publisher={{ACM New York, NY, USA}}
+}
+
+@article{snow2012evolving,
+  title={The Evolving Arms Race in Evasion Tactics: A Study of Malicious {PDF} Files},
+  author={Snow, Kevin Z. and Monrose, Fabian and Wang, Lixin},
+  journal={IEEE Transactions on Information Forensics and Security},
+  volume={7},
+  number={1},
+  pages={255--269},
+  year={2012},
+  publisher={IEEE}
+}
+
+@book{malwareanalysisbook,
+  author    = {{Monnappa K A}},
+  title     = {Malware Analysis and Detection Engineering: A Comprehensive Approach to Malware Analysis, Detection, and Response},
+  publisher = {Apress},
+  year      = {2021},
+  isbn      = {978-1484261923}
+}
+
+
+% --- Advanced Persistent Threats (APTs) & C2 Tactics ---
+@misc{mandiant_apt1,
+  author = {{Mandiant}},
+  title = {{APT1: Exposing One of China's Cyber Espionage Units}},
+  year = {2013},
+  howpublished = {\url{https://www.mandiant.com/sites/default/files/2021-09/mandiant-apt1-report.pdf}},
+  note = {Accessed: 2024-05-30}
+}
+
+@article{brumley2013introspective_journal,
+  title={Introspective Analysis of Malware Using Hardware Virtualization},
+  author={Brumley, David and Poosankam, Periwinkle and Song, Dawn},
+  journal={Journal of Computer Security},
+  volume={21},
+  number={4},
+  pages={581--612},
+  year={2013},
+  publisher={IOS Press},
+  note={Extended version of work originally presented at RAID 2008}
+}
+
+@misc{mitre_attack_framework,
+  author       = {{The MITRE Corporation}},
+  title        = {{MITRE ATT\&CK Framework}},
+  howpublished = {\url{https://attack.mitre.org/}},
+  year         = {2024}, 
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{mitreATTACK_C2,
+  author       = {{The MITRE Corporation}},
+  title        = {{Command and Control - Enterprise | MITRE ATT\&CK®}},
+  howpublished = {\url{https://attack.mitre.org/tactics/TA0011/}},
+  year         = {2024},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{mitreATTACK_DefenseEvasion,
+  author       = {{The MITRE Corporation}},
+  title        = {{Defense Evasion - Enterprise | MITRE ATT\&CK®}},
+  howpublished = {\url{https://attack.mitre.org/tactics/TA0005/}},
+  year         = {2024},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{mitreATTACK_Execution,
+  author       = {{The MITRE Corporation}},
+  title        = {{Execution - Enterprise | MITRE ATT\&CK®}},
+  howpublished = {\url{https://attack.mitre.org/tactics/TA0002/}},
+  year         = {2024},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{mitreATTACK_Persistence,
+  author       = {{The MITRE Corporation}},
+  title        = {{Persistence - Enterprise | MITRE ATT\&CK®}},
+  howpublished = {\url{https://attack.mitre.org/tactics/TA0003/}},
+  year         = {2024},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{mitreATTACK_Discovery,
+  author       = {{The MITRE Corporation}},
+  title        = {{Discovery - Enterprise | MITRE ATT\&CK®}},
+  howpublished = {\url{https://attack.mitre.org/tactics/TA0007/}},
+  year         = {2024},
+  note         = {Accessed: 2024-05-30}
+}
+@misc{mitreATTACK_Collection,
+  author       = {{The MITRE Corporation}},
+  title        = {{Collection - Enterprise | MITRE ATT\&CK®}},
+  howpublished = {\url{https://attack.mitre.org/tactics/TA0009/}},
+  year         = {2024},
+  note         = {Accessed: 2024-05-30}
+}
+
+
+% --- Windows Internals & API (Relevant to Implants) ---
+@book{russinovich2017windows,
+  title={Windows Internals, Part 1},
+  edition={7th},
+  author={Russinovich, Mark E. and Margosis, David A. and Solomon, Alex and Ionescu, Pavel A.},
+  year={2017},
+  publisher={Microsoft Press},
+  isbn={978-0735684188}
+}
+
+@book{russinovich2021windows_part2,
+  title={Windows Internals, Part 2},
+  edition={7th},
+  author={Russinovich, Mark E. and Margosis, David A. and Solomon, Alex and Ionescu, Pavel A.},
+  year={2021},
+  publisher={Microsoft Press},
+  isbn={978-0135462409}
+}
+
+@misc{msdn_createprocess,
+  author = {{Microsoft Developer Network (MSDN)}},
+  title = {{CreateProcessA function (processthreadsapi.h)}},
+  howpublished = {\url{https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessa}},
+  note = {Accessed: 2024-05-30}
+}
+
+@misc{msdn_setfileinformationbyhandle,
+  author = {{Microsoft Developer Network (MSDN)}},
+  title = {{SetFileInformationByHandle function (fileapi.h)}},
+  howpublished = {\url{https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfileinformationbyhandle}},
+  note = {Accessed: 2024-05-30}
+}
+
+@misc{msdn_file_disposition_information_ex,
+  author = {{Microsoft Developer Network (MSDN)}},
+  title = {{FILE_DISPOSITION_INFORMATION_EX structure (minwinbase.h)}},
+  howpublished = {\url{https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-file_disposition_information_ex}},
+  note = {Accessed: 2024-05-30}
+}
+
+@misc{msdn_desktop_duplication_api,
+  author = {{Microsoft Developer Network (MSDN)}},
+  title = {{Desktop Duplication API}},
+  howpublished = {\url{https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/desktop-duplication-api}},
+  note = {Accessed: 2024-05-30 (More advanced than GDI for screen capture)}
+}
+
+@misc{msdn_gdi_bitblt,
+  author = {{Microsoft Developer Network (MSDN)}},
+  title = {{BitBlt function (wingdi.h)}},
+  howpublished = {\url{https://learn.microsoft.com/en-us/windows/win32/api/wingdi/nf-wingdi-bitblt}},
+  note = {Accessed: 2024-05-30 (A common GDI function for screen capture)}
+}
+
+
+% --- Linux Internals & API (Relevant to Implants) ---
+@book{bovet2005understanding,
+  title={Understanding the Linux Kernel},
+  author={Bovet, Daniel P. and Cesati, Marco},
+  year={2005},
+  edition={3rd},
+  publisher={O'Reilly Media},
+  isbn={978-0596005658}
+}
+
+@book{love2010linux,
+  title={Linux Kernel Development},
+  author={Love, Robert},
+  year={2010},
+  edition={3rd},
+  publisher={Addison-Wesley Professional},
+  isbn={978-0672329463}
+}
+
+@misc{man_prctl,
+  author = {{Linux man-pages project}},
+  title = {{prctl(2) - Linux manual page}},
+  howpublished = {\url{https://man7.org/linux/man-pages/man2/prctl.2.html}},
+  note = {Accessed: 2024-05-30}
+}
+
+@misc{man_execve,
+  author = {{Linux man-pages project}},
+  title = {{execve(2) - Linux manual page}},
+  howpublished = {\url{https://man7.org/linux/man-pages/man2/execve.2.html}},
+  note = {Accessed: 2024-05-30 (Relevant for argv[0] manipulation)}
+}
+
+@misc{man_setsid,
+  author = {{Linux man-pages project}},
+  title = {{setsid(2) - Linux manual page}},
+  howpublished = {\url{https://man7.org/linux/man-pages/man2/setsid.2.html}},
+  note = {Accessed: 2024-05-30 (For daemonization)}
+}
+
+@misc{xorg_xlib_screenshot,
+  author = {{Various X.Org contributors}},
+  title = {{XGetImage - manipulate images}},
+  howpublished = {\url{https://tronche.com/gui/x/xlib/graphics/XGetImage.html}},
+  note = {Accessed: 2024-05-30 (Low-level X11 screenshot method)}
+}
+
+@misc{wayland_pipewire_screenshot,
+  author = {{Wayland and PipeWire developers}},
+  title = {{PipeWire Project - Screen capture under Wayland}},
+  howpublished = {\url{https://pipewire.org/}},
+  note = {Accessed: 2024-05-30 (Relevant for modern Linux desktops)}
+}
+
+
+% --- C2 Frameworks and Tools (for State of the Art / Comparison) ---
+@misc{metasploit,
+  author       = {{Rapid7}},
+  title        = {Metasploit Framework},
+  howpublished = {\url{https://www.metasploit.com/}},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{cobaltstrike,
+  author       = {{Fortra}},
+  title        = {Cobalt Strike},
+  howpublished = {\url{https://www.cobaltstrike.com/}},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{covenantc2,
+  author       = {{cobbr}},
+  title        = {Covenant - A .NET C2 Framework},
+  howpublished = {\url{https://github.com/cobbr/Covenant}},
+  note         = {Accessed: 2024-05-30} 
+}
+
+@misc{sliverc2,
+  key          = {sliverc2},
+  author       = {{Bishop Fox}},
+  title        = {Sliver C2 Framework},
+  howpublished = {\url{https://github.com/BishopFox/sliver}},
+  note         = {Accessed: 2024-05-30 (Go-based C2)}
+}
+
+@misc{havocc2,
+  key          = {havocc2},
+  author       = {{HavocFramework}},
+  title        = {Havoc C2 Framework},
+  howpublished = {\url{https://github.com/HavocFramework/Havoc}},
+  note         = {Accessed: 2024-05-30 (Modern C2 in C++/Python with Go agent examples)}
+}
+
+@misc{merlin2019,
+  author       = {{Ne0nd0g}},
+  title        = {Merlin C2 Framework},
+  howpublished = {\url{https://github.com/Ne0nd0g/merlin}},
+  year         = {2019},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{mythicc2,
+  key          = {mythicc2},
+  author       = {{its-a-feature}},
+  title        = {Mythic C2 Framework},
+  howpublished = {\url{https://github.com/its-a-feature/Mythic}},
+  note         = {Accessed: 2024-05-30 (Python3 C2 with Go agent support)}
+}
+
+@misc{bruteratel,
+  author       = {{Brute Ratel}},
+  title        = {Brute Ratel C4},
+  howpublished = {\url{https://bruteratel.com/}},
+  note         = {Accessed: 2024-05-30. Commercial tool.}
+}
+
+
+% --- Specific Guides & Articles on Implants and Evasion ---
+@misc{nimc2implantguide_cooten,
+  author       = {van Cooten, Cas},
+  title        = {Building a C2 Implant in Nim: Considerations and Lessons Learned},
+  howpublished = {\url{https://casvancooten.com/posts/2021/08/building-a-c2-implant-in-nim-considerations-and-lessons-learned/}},
+  year         = {2021},
+  month        = {August},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{cppc2implantguide_shogun,
+  author       = {{Shogun Lab}},
+  title        = {Building C2 Implants in C++: A Primer},
+  howpublished = {\url{https://shogunlab.gitbook.io/building-c2-implants-in-cpp-a-primer}},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{iredteam_process_injection,
+  author = {{ired.team}},
+  title = {{Process Injection - T1055}},
+  howpublished = {\url{https://www.ired.team/offensive-security/code-injection-process-injection}},
+  note = {Accessed: 2024-05-30 (Overview of various techniques)}
+}
+
+@misc{sansevasiontalk_example,
+  author       = {{SANS Institute}},
+  title        = {The Arms Race of Evasion: Examining Evolving Evasion Techniques in Incident Response},
+  howpublished = {\url{https://www.sans.org/webcasts/the-arms-race-of-evasion-examining-evolving-evasion-techniques-in-incident-response/}},
+  note         = {Accessed: 2024-05-30. Specific presentation details might vary.}
+}
+
+@misc{evasive_techniques_malwarebytes,
+  author       = {{Malwarebytes Labs}},
+  title        = {Explained: Evasion techniques (Series)},
+  howpublished = {\url{https://www.malwarebytes.com/blog/news/2021/02/explained-evasion-techniques}},
+  note         = {Accessed: 2024-05-30}
+}
+
+@article{walter2017command,
+  title={Command and Control (C\&C) Server Detection with Machine Learning},
+  author={Walter, Johannes and Samosseiko, Dimitri and Slijep{\v{c}}evi{\'{c}}, Sini{\v{s}}a},
+  journal={Procedia Computer Science},
+  volume={112},
+  pages={2267--2275},
+  year={2017},
+  publisher={Elsevier}
+}
+
+@book{donovan2015go,
+  title={The Go Programming Language},
+  author={Donovan, Alan A. A. and Kernighan, Brian W.},
+  year={2015},
+  publisher={Addison-Wesley Professional},
+  isbn={978-0134190440}
+}
+
+@misc{golang_effective_go,
+  author       = {{The Go Authors}},
+  title        = {Effective Go},
+  howpublished = {\url{https://go.dev/doc/effective_go}},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{golang_embed_package,
+  author       = {{The Go Authors}},
+  title        = {Package embed - embed files in Go programs},
+  howpublished = {\url{https://pkg.go.dev/embed}},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{gin_gonic_framework,
+  author       = {{Gin-Gonic Team}},
+  title        = {Gin Web Framework},
+  howpublished = {\url{https://gin-gonic.com/docs/}},
+  note         = {Accessed: 2024-05-30}
+}
+
+@misc{gorm_library,
+  author       = {{GORM Authors}},
+  title        = {GORM - The fantastic ORM library for Golang},
+  howpublished = {\url{https://gorm.io/docs/}},
+  note         = {Accessed: 2024-05-30}
+}
+
+
+% --- React (Frontend) ---
+@misc{react_documentation,
+  author       = {{Meta and React Community}},
+  title        = {React Documentation},
+  howpublished = {\url{https://react.dev/}},
+  note         = {Accessed: 2025-05-30}
+}
+
+@book{banks2020learningreact,
+  title={Learning React: Modern Patterns for Developing React Apps},
+  author={Banks, Alex and Porcello, Eve},
+  year={2020},
+  edition={2nd},
+  publisher={O'Reilly Media},
+  isbn={978-1492051725}
+}
+
+@misc{tailwind_css,
+  author       = {{Tailwind Labs}},
+  title        = {Tailwind CSS Documentation},
+  howpublished = {\url{https://tailwindcss.com/docs}},
+  note         = {Accessed: 2025-05-30 }
+}

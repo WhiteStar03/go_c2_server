@@ -1,6 +1,7 @@
 // src/components/AuthForm.js
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import API_CONFIG from "../config/api";
 
 function AuthForm({ isLogin, setToken }) {
   const [username, setUsername] = useState("");
@@ -12,7 +13,7 @@ function AuthForm({ isLogin, setToken }) {
     e.preventDefault();
 
     const path = isLogin ? "login" : "register";
-    const endpoint = `/${path}`;
+    const endpoint = `${API_CONFIG.BASE_URL}/${path}`;
 
     const response = await fetch(endpoint, {
       method: "POST",

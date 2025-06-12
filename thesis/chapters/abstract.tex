@@ -1,0 +1,9 @@
+\chapter*{Abstract}
+\onehalfspacing
+\addcontentsline{toc}{chapter}{Abstract} 
+
+This bachelor thesis details the design, implementation, and evaluation of a Command-and-Control (C2) framework intended for cybersecurity research and threat emulation. The system comprises a C2 server developed in Go, leveraging the \verb|Gin Gonic framework| for robust API handling, and Go-based implants designed for stealth and multi-platform compatibility (Windows and Linux). A modern web-based client, built with React, provides operators with an intuitive interface for real-time implant (an implant is a malicious  management, command execution, filesystem interaction, and live desktop streaming.
+
+The core objective is to provide a modular and extensible platform for simulating advanced attacker TTPs (Tactics, Techniques, and Procedures) in controlled environments. Implants incorporate features such as daemonization, self-deletion, process name manipulation, and secure communication with the C2 server. The thesis explores various evasion techniques employed by the implants to bypass common detection mechanisms.
+
+The experimental validation demonstrates the framework's capabilities, including remote command execution, file system enumeration, screenshot capture, and basic evasion characteristics. This project contributes a functional C2 system that can aid security professionals in understanding adversarial methodologies, testing defensive postures, and improving overall cybersecurity resilience. Ethical considerations and responsible use for defensive purposes are emphasized throughout the research.

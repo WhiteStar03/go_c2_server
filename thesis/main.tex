@@ -1,0 +1,217 @@
+\documentclass[12pt,a4paper,oneside,openany]{book}
+
+% --- Basic Setup & Spacing ---
+\newcommand\tab[1][1cm]{\hspace*{#1}} % Custom tab command
+\sloppy % Adjusts word spacing to avoid overfull hboxes, can lead to more varied spacing
+\usepackage{xurl}
+% --- Core Packages ---
+\usepackage[english]{babel} % Language support
+\usepackage[utf8]{inputenc} % Input encoding (often default in modern LaTeX)
+\usepackage[T1]{fontenc}    % Output font encoding (for better hyphenation and special chars)
+\usepackage[frozencache=false]{minted}
+
+\usepackage{inconsolata} % A clean, modern monospaced font
+\newcommand{\cframe}[1]{\colorbox{black!10}{\texttt{#1}}}
+
+\usepackage{booktabs} 
+
+% --- Page Layout & Geometry ---
+\usepackage[left=1.2in,right=1.2in,top=1in,bottom=1in]{geometry}
+\usepackage{setspace}
+
+
+% --- Mathematics & Symbols ---
+\usepackage{amsmath,amsthm,amssymb}
+
+% --- Graphics & Colors ---
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+% --- Lists & Paragraphs ---
+\usepackage{paralist} % For compact lists (consider replacing with enumitem's full power if needed)
+\usepackage[inline]{enumitem} % For flexible inline and standard lists
+\usepackage{tabularx}
+
+% --- Code Listings ---
+% For 'listings' package (if you use it as an alternative or for simple inline)
+\usepackage{listings}
+
+% --- Hyperlinks, URLs, Citations ---
+\usepackage{url}      % For typesetting URLs
+\usepackage{hyperref} % For clickable links and PDF metadata (load late)
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    pdftitle={Your Thesis Title}, % Add your actual title
+    pdfauthor={Valase Paul Mihai}, % Your name
+    pdfsubject={Bachelor Thesis},
+    pdfkeywords={C2, Go, React, Cybersecurity, Threat Emulation}, % Add keywords
+    bookmarks=true,
+    bookmarksopen=true
+}
+\usepackage{cite}     % For citation management (e.g., [1,2,3] or [SMW12])
+
+% --- Fonts (Optional) ---
+% \usepackage{sourcecodepro} % Example: Monospaced font for code if desired
+% \usepackage{lmodern} % A common modern alternative to Computer Modern
+
+% --- Other Utilities ---
+\usepackage{hyphenat} % For better hyphenation control
+\usepackage{algorithm, algpseudocode} % For writing algorithms
+\usepackage{float} % For more control over float placement, e.g., [H] for figures
+
+% --- Theorem-like Environments ---
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{lem}[thm]{Lemma}
+\theoremstyle{definition}
+\newtheorem{defn}{Definition}[section]
+\theoremstyle{remark}
+\newtheorem{rem}{Remark}[section]
+\newtheorem{exmp}{Example}[section]
+
+% --- Minted Configuration ---
+\setminted{
+    frame=lines,        % Add a frame around code blocks
+    framesep=2mm,       % Space between frame and code
+    baselinestretch=1.0,% Line spacing within code
+    fontsize=\footnotesize, % Font size for code
+    linenos,            % Display line numbers
+    breaklines,         % Allow automatic line breaks in long lines
+    breakautoindent=true,% Indent continued lines
+    tabsize=4,          % Tabulator size
+    bgcolor=backcolour  % Background color for minted blocks
+}
+% Define background color for minted if not already defined by lstdefinestyle
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% --- Listings Package Configuration (if used) ---
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+% backcolour is already defined above
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false, % If true, breaks only at whitespace
+    breaklines=true,         % Allow lines to break
+    captionpos=b,            % Position of the caption (bottom)
+    keepspaces=true,         % Keep spaces in the code
+    numbers=left,            % Line numbers on the left
+    numbersep=5pt,           % Space between line numbers and code
+    showspaces=false,        % Don't show spaces as special characters
+    showstringspaces=false,  % Don't show spaces in strings differently
+    showtabs=false,          % Don't show tabs as special characters
+    tabsize=2                % Tab size
+}
+\lstset{style=mystyle} % Set this as the default style for listings
+
+% ==============================================================================
+\begin{document}
+% ==============================================================================
+
+% --- FRONT MATTER ---
+% Title Page 1 (University Standard)
+\thispagestyle{empty}
+\begin{center}
+\includegraphics[width=100pt]{includegraphics/uvt_logo.png} \\[2cm] % Ensure this path is correct
+{\large {\bf WEST UNIVERSITY OF TIMI\c SOARA \\
+FACULTY OF MATHEMATICS AND COMPUTER SCIENCE \\
+BACHELOR STUDY PROGRAM: COMPUTER SCIENCE IN ENGLISH}} \\[4cm]
+{\huge {\bf BACHELOR THESIS}} \\[5cm]
+{\large \bf SUPERVISOR: \hfill GRADUATE:} \\[0.5cm]
+{\large lect. dr. Cristian Cira \hfill Valase Paul Mihai}
+\end{center}
+\vfill
+\begin{center}
+{\bf TIMI\c SOARA \\ 2025} % Update year if needed
+\end{center}
+\clearpage
+
+% Title Page 2 (Thesis Specific)
+\begin{titlepage}
+\centering
+\includegraphics[width=100pt]{includegraphics/uvt_logo.png} \\[2cm] % Ensure this path is correct
+{\large \textbf{WEST UNIVERSITY OF TIMIŞOARA}} \\
+\large \textbf{FACULTY OF MATHEMATICS AND COMPUTER SCIENCE} \\
+\large \textbf{BACHELOR STUDY PROGRAM: COMPUTER SCIENCE IN ENGLISH} \\[2cm]
+{\Huge \textbf{Development of a Command-and-Control (C2) Framework with Go-Based Implants and React Web Interface for Threat Emulation}} \\[1cm] % Updated Title
+{\large \textbf{SUPERVISOR:} lect. dr. Cristian Cira} \\[0.5cm]
+{\large \textbf{GRADUATE:} Valase Paul Mihai} \\[5cm]
+{\large TIMIŞOARA \\ 2025} % Update year if needed
+\end{titlepage}
+\clearpage
+
+% Optional: Declaration of Authenticity / Honesty
+% \input{chapters/declaration}
+% \clearpage
+
+\pagenumbering{roman} % Roman numerals for front matter (ToC, Abstract, etc.)
+
+% Abstract
+\input{chapters/abstract}
+\clearpage
+
+% Acknowledgements (Optional but good practice)
+% \chapter*{Acknowledgements}
+% \addcontentsline{toc}{chapter}{Acknowledgements}
+% Your acknowledgements text here...
+% \clearpage
+
+\tableofcontents
+\clearpage
+
+% Optional: List of Figures, Tables, Listings
+% \listoffigures
+% \addcontentsline{toc}{chapter}{List of Figures}
+% \clearpage
+
+% \listoftables
+% \addcontentsline{toc}{chapter}{List of Tables}
+% \clearpage
+
+% If using minted and want a list of listings
+% \renewcommand{\listoflistingscaption}{List of Code Listings} % Custom title
+% \listoflistings
+% \addcontentsline{toc}{chapter}{List of Code Listings}
+% \clearpage
+
+\pagenumbering{arabic} % Arabic numerals for main content
+
+% --- MAIN CONTENT ---
+\input{chapters/introduction}
+\input{chapters/background_terminology}
+\input{chapters/state_art}
+\input{chapters/system_design_architecture} % This is where your Go/JSX code likely is
+\input{chapters/experimental_setup_results}
+\input{chapters/discussion_security_implications}
+% \input{chapters/conclusion_future_work} % Uncomment if you have this file
+
+% --- BACK MATTER ---
+\cleardoublepage % Ensures bibliography starts on a right-hand page if oneside isn't used, good practice
+\phantomsection % Ensures hyperref link for bibliography in ToC is correct
+\addcontentsline{toc}{chapter}{Bibliography}
+\bibliographystyle{alpha} % Example: [Aut20] style labels.
+                          % Other options: plain (numbered), unsrt (numbered, unsorted),
+                          % ieeetr (numbered, IEEE style), apalike (Author, Year)
+\bibliography{references}   % Assumes your .bib file is named references.bib
+
+% Appendices (Optional)
+% \appendix
+% \chapter{Additional Code Snippets}
+% \label{app:code_snippets}
+% \input{chapters/appendix_a_code_snippets}
+
+% \chapter{Setup Guide}
+% \label{app:setup_guide}
+% \input{chapters/appendix_b_setup_guide}
+
+% ==============================================================================
+\end{document}
+% ==============================================================================
