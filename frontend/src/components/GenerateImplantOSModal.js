@@ -1,4 +1,4 @@
-import React from 'react'; // Don't forget React import
+import React from 'react'; 
 
 function GenerateImplantOSModal({ isOpen, onClose, onConfirm, selectedOS, setSelectedOS }) {
     if (!isOpen) return null;
