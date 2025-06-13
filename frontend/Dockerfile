@@ -1,17 +1,14 @@
-# 1) Build stage
 FROM node:18-alpine AS build
 
-# set working dir
 WORKDIR /app
 
-# install dependencies
 COPY package*.json ./
+
 RUN npm ci
 
-# copy source and build
 COPY . .
-RUN npm run build
 
+RUN npm run build
 
 FROM nginx:stable-alpine
 RUN rm -rf /usr/share/nginx/html/*

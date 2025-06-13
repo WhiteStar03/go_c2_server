@@ -3,7 +3,6 @@ package models
 
 import "time"
 
-// ScreenshotInfo represents metadata for a single screenshot.
 type ScreenshotInfo struct {
 	CommandID int       `json:"command_id"`
 	Timestamp time.Time `json:"timestamp"` // from command's updated_at

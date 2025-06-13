@@ -1,7 +1,7 @@
-// In implant/main.go or a new fs_utils.go
+
 package main
 
-// (Define FileSystemEntry and FileSystemListing structs here as well for the implant's use)
+
 import (
 	"fmt"
 	"os"
@@ -13,33 +13,33 @@ import (
 func listDirectory(path string) (FileSystemListing, error) {
 	listing := FileSystemListing{RequestedPath: path}
 
-	// Ensure path is absolute and clean. This is important for consistency
-	// and helps prevent some path traversal if not careful (though primary defense is on C2)
+	
+	
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		listing.Error = fmt.Sprintf("Could not get absolute path for '%s': %v", path, err)
 		return listing, err
 	}
-	listing.RequestedPath = absPath // Store the cleaned, absolute path
+	listing.RequestedPath = absPath 
 
 	files, err := os.ReadDir(absPath)
 	if err != nil {
-		return listing, err // Error will be set by caller based on this
+		return listing, err 
 	}
 
 	for _, file := range files {
-		info, err := file.Info() // os.DirEntry.Info() gets FileInfo
+		info, err := file.Info() 
 		entry := FileSystemEntry{
 			Name:  file.Name(),
 			IsDir: file.IsDir(),
-			Path:  filepath.Join(absPath, file.Name()), // Send full path for convenience
+			Path:  filepath.Join(absPath, file.Name()), 
 		}
-		if err == nil { // If .Info() succeeded
+		if err == nil { 
 			entry.Size = info.Size()
 			entry.ModTime = info.ModTime()
 			entry.Permissions = info.Mode().String()
 		} else {
-			// Could log this error, or set a placeholder for permissions
+			
 			entry.Permissions = "?????????"
 		}
 		listing.Entries = append(listing.Entries, entry)
@@ -57,18 +57,18 @@ func listRoots() (FileSystemListing, error) {
 				listing.Entries = append(listing.Entries, FileSystemEntry{
 					Name:        path,
 					IsDir:       true,
-					ModTime:     time.Time{},  // Not easily available for drive itself
-					Permissions: "dr--r--r--", // Placeholder
+					ModTime:     time.Time{},  
+					Permissions: "dr--r--r--", 
 					Path:        path,
 				})
 			}
 		}
-	} else { // Linux, macOS, etc.
+	} else { 
 		listing.Entries = append(listing.Entries, FileSystemEntry{
 			Name:        "/",
 			IsDir:       true,
-			ModTime:     time.Time{},  // Stat "/" for actual modtime if needed
-			Permissions: "drwxr-xr-x", // Placeholder
+			ModTime:     time.Time{},  
+			Permissions: "drwxr-xr-x", 
 			Path:        "/",
 		})
 	}

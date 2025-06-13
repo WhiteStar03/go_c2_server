@@ -19,10 +19,8 @@ func main() {
 	config.ConnectDatabase()
 	go monitorImplantStatuses()
 
-	// Get the configured router with all routes
 	r := routes.SetupRouter()
 
-	// Apply CORS Middleware to the main router
 	r.Use(cors.New(cors.Config{
 		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},

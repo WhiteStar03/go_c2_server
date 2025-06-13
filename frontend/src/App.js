@@ -4,7 +4,6 @@ import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import AuthForm from './components/AuthForm';
 import Dashboard from './components/Dashboard';
 
-// Optional: Create a simple Home component or use Dashboard/Login
 function Home() {
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -17,7 +16,7 @@ function Home() {
     }
   }, [navigate, token]);
 
-  return <p>Loading...</p>; // Or some placeholder
+  return <p>Loading...</p>; 
 }
 
 
@@ -29,15 +28,14 @@ function App() {
     setToken(newToken);
     if (newToken) {
       localStorage.setItem('token', newToken);
-      // Optionally navigate to dashboard on login
-      // navigate('/dashboard'); 
+      navigate('/dashboard'); 
     } else {
       localStorage.removeItem('token');
     }
   };
   
   const logout = () => {
-    handleSetToken(null); // Use the centralized token handler
+    handleSetToken(null); 
     navigate('/login');
   };
 

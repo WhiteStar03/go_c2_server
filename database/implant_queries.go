@@ -2,10 +2,11 @@ package database
 
 import (
 	"awesomeProject/config"
-	"awesomeProject/models" // Replace with your actual models package
+	"awesomeProject/models"
 	"fmt"
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // GetImplantsByUserID returns all implants owned by a specific user.
@@ -66,10 +67,10 @@ func CreateImplant(userID int, targetOS string) (*models.Implant, error) {
 	implant := models.Implant{
 		UserID:      userID,
 		UniqueToken: uniqueToken,
-		Status:      "new",    // Initial status
-		TargetOS:    targetOS, // Save the target OS
+		Status:      "new",
+		TargetOS:    targetOS,
 		Deployed:    false,
-		LastSeen:    time.Now(), // Set initial last_seen
+		LastSeen:    time.Now(),
 		IPAddress:   "",
 	}
 	result := config.DB.Create(&implant)
