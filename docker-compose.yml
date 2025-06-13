@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: c2_db
+    restart: unless-stopped
+    environment:
+      # These are for PostgreSQL image initialization
+      POSTGRES_USER: c2user
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: c2server
+      # DB_HOST and DB_PORT are not needed here for the postgres container itself
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    volumes: # Good practice to add a volume for persistence
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go-backend
+    restart: unless-stopped
+    depends_on: # Ensure db starts before backend (though app should still handle connection retries)
+      - db
+    environment:
+      # These are for your Go application to connect to the DB
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: c2user
+      DB_PASSWORD: mysecretpassword
+      DB_NAME: c2server
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+    volumes:
+      # Mount the local binaries directory to the container
+      - ./binaries:/app/binaries:ro  # ro = read-only for security
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: react-frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://backend:8080
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes: # Define the named volume
+  pgdata:

@@ -1,0 +1,51 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* src/index.css or similar */
+
+/* For WebKit browsers (Chrome, Safari, Edge) */
+/* Style the main scrollable area in the FileSystemExplorer */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;  /* Width of the vertical scrollbar */
+  height: 8px; /* Height of the horizontal scrollbar */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #2d3748; /* bg-gray-800 or similar dark track */
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #718096; /* bg-gray-500 or similar medium thumb */
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0; /* bg-gray-400 or similar lighter thumb on hover */
+}
+
+/* For Firefox (newer versions) */
+.custom-scrollbar {
+  scrollbar-width: thin; /* "auto" or "thin"  */
+  scrollbar-color: #718096 #2d3748; /* thumb-color track-color */
+}
+
+/* Ensure your current path display also handles overflow better */
+.path-display-container {
+  /* This will allow the path to scroll horizontally if too long, instead of wrapping ugly */
+  white-space: nowrap;
+  overflow-x: auto;
+  /* You can also add padding if needed */
+  padding-bottom: 4px; /* To make space for the scrollbar if it appears */
+}
