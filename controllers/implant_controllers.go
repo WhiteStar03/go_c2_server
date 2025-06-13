@@ -3,15 +3,15 @@ package controllers
 
 import (
 	"bytes"
-	"encoding/base64" // <-- NEW IMPORT
+	"encoding/base64" 
 	"fmt"
 	"net/http"
-	"os"            // <-- NEW IMPORT
-	"path/filepath" // <-- NEW IMPORT
+	"os"            
+	"path/filepath" 
 	"sort"
 	"strconv"
-	"strings" // <-- NEW IMPORT
-	"time"    // <-- NEW IMPORT
+	"strings" 
+	"time"    
 
 	"awesomeProject/config"
 	"awesomeProject/database"
