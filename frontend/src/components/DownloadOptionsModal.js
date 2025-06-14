@@ -90,7 +90,7 @@ function DownloadOptionsModal({ isOpen, onClose, onConfirm, implantToken, target
               if (error) setError('');
             }}
             placeholder="e.g., 192.168.0.110 or yourdomain.com:8080"
-            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 sm:text-sm text-gray-900 ${ // <-- Added text-gray-900 HERE
+            className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 sm:text-sm text-gray-900 ${ 
               error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-indigo-500 focus:border-indigo-500'
             }`}
           />

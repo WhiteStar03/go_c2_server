@@ -7,9 +7,9 @@ import FileSystemExplorer from '../components/FileSystemExplorer';
 
 
 const API_BASE = "/api";
-const REFRESH_INTERVAL = 5000; // For general implant list
-const SCREENSHOT_GALLERY_REFRESH_INTERVAL = 3000; // For gallery mode viewer polling
-const SCREENSHOT_LIVESTREAM_REFRESH_INTERVAL = 1000; // For livestream mode viewer polling (1s)
+const REFRESH_INTERVAL = 5000; 
+const SCREENSHOT_GALLERY_REFRESH_INTERVAL = 3000; 
+const SCREENSHOT_LIVESTREAM_REFRESH_INTERVAL = 1000; 
 const GLOBAL_C2_IP_KEY = 'dashboardGlobalC2IP';
 
 
@@ -101,12 +101,12 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, implantToken }) {
 
 const extractScreenshotPathFromCmdOutput = (output) => {
     if (typeof output !== 'string') return null;
-    // Regex for "Screenshot saved to C2 server at: c2_screenshots/UUID/filename.png"
+    
     const c2PathMatch = output.match(/Screenshot saved to C2 server at: (c2_screenshots\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\/[a-zA-Z0-9_.-]+\.png)/);
     if (c2PathMatch && c2PathMatch[1]) {
         return c2PathMatch[1];
     }
-    // Simpler regex if UUID format isn't strictly enforced in path (less specific)
+    
     const simplerPathMatch = output.match(/Screenshot saved to C2 server at: (c2_screenshots\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+\.png)/);
     if (simplerPathMatch && simplerPathMatch[1]) {
         return simplerPathMatch[1];
@@ -133,9 +133,9 @@ function Dashboard() {
   const [screenshotViewerState, setScreenshotViewerState] = useState({
     isOpen: false,
     implantId: null,
-    screenshots: [], // Array of "c2_screenshots/..." paths
-    initialPath: null, // Specific path to open in gallery mode
-    mode: 'gallery', // 'gallery' or 'livestream'
+    screenshots: [], 
+    initialPath: null, 
+    mode: 'gallery', 
   });
   const screenshotPollIntervalRef = useRef(null);
 
@@ -191,7 +191,7 @@ const closeFileExplorer = () => {
           setTimeout(() => window.location.href = '/login', 3000);
         } else {
           console.error(`Error fetching implants: ${msg}`);
-          // displayNotification(`Error fetching implants: ${msg}`, "error"); // Optional: notify user
+          
         }
         return;
       }
@@ -199,7 +199,7 @@ const closeFileExplorer = () => {
       setImplants(data.implants || []);
     } catch (err) {
       console.error("Network error fetching implants:", err);
-      // displayNotification("Network error fetching implants. Check console.", "error"); // Optional
+      
     }
   };
 
@@ -213,9 +213,9 @@ const closeFileExplorer = () => {
       });
       if (res.ok) {
         displayNotification(`Implant record for ${targetOS} generated successfully!`, "success");
-        fetchImplants(); // Refresh the list
+        fetchImplants(); 
       } else {
-        const data = await res.json().catch(() => ({})); // Try to parse error
+        const data = await res.json().catch(() => ({})); 
         displayNotification(`Failed to generate implant: ${data.error || res.statusText}`, "error");
       }
     } catch (err) {
@@ -223,7 +223,7 @@ const closeFileExplorer = () => {
       console.error("Generate implant error:", err);
     } finally {
       setIsGenerateOSModalOpen(false);
-      setSelectedOSForGeneration("windows"); // Reset for next time
+      setSelectedOSForGeneration("windows"); 
     }
   };
   
@@ -243,9 +243,9 @@ const closeFileExplorer = () => {
       });
       if (res.ok) {
         displayNotification("Implant deleted successfully.", "success");
-        fetchImplants(); // Refresh list
+        fetchImplants(); 
         if (selectedImplantForTerminal === implantToDelete) setSelectedImplantForTerminal(null);
-        if (screenshotViewerState.implantId === implantToDelete) closeScreenshotViewer(); // Close viewer if it was for this implant
+        if (screenshotViewerState.implantId === implantToDelete) closeScreenshotViewer(); 
       } else {
         const data = await res.json().catch(() => ({}));
         displayNotification(`Failed to delete implant: ${data.error || res.statusText}`, "error");
@@ -267,7 +267,7 @@ const closeFileExplorer = () => {
         displayNotification("Default C2 IP cleared.", "success");
         return;
     }
-    // Basic validation (you might want a more robust regex for FQDNs, IPs, and ports)
+    
     const pattern = /^([a-zA-Z0-9.-]+|\[[0-9a-fA-F:]+\])(:\d{1,5})?$|^localhost(:\d{1,5})?$/;
     if (!pattern.test(trimmedC2IP)) {
         displayNotification("Invalid Default C2 IP or Hostname format. Examples: 192.168.1.100, yourdomain.com, 10.0.0.5:8080, [::1]:443, localhost:8000", "error");
@@ -285,7 +285,7 @@ const closeFileExplorer = () => {
         isOpen: true,
         implantToken: implant.unique_token,
         targetOS: implant.target_os,
-        defaultC2IP: globalC2IP, // Pass the currently saved global C2 IP
+        defaultC2IP: globalC2IP, 
       });
     } else {
       displayNotification("Error: Could not find implant details to configure download.", "error");
@@ -305,17 +305,17 @@ const closeFileExplorer = () => {
         body: JSON.stringify({ c2_ip: c2IP }),
       });
       if (!res.ok) {
-        const errorData = await res.json().catch(() => null); // Try to parse error JSON
+        const errorData = await res.json().catch(() => null); 
         const errorMessage = errorData?.error || `Server error: ${res.status} ${res.statusText}`;
         throw new Error(errorMessage);
       }
       const blob = await res.blob();
-      let filename = `implant_${implantTokenForAPI}_${targetOSForFilename}`; // Default filename
+      let filename = `implant_${implantTokenForAPI}_${targetOSForFilename}`; 
       const contentDisposition = res.headers.get('content-disposition');
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?(.+?)"?(;|$)/i);
         if (filenameMatch && filenameMatch[1]) filename = filenameMatch[1];
-      } else if (targetOSForFilename === "windows") filename += ".exe"; // Add .exe for Windows if not in header
+      } else if (targetOSForFilename === "windows") filename += ".exe"; 
       
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -346,7 +346,7 @@ const closeFileExplorer = () => {
     }
   };
 
-  // Helper function to send commands from dashboard (for start/stop stream)
+  
   const sendDashboardCommand = async (implantId, commandStr) => {
     const token = localStorage.getItem("token");
     try {
@@ -373,9 +373,9 @@ const closeFileExplorer = () => {
     }
   };
 
-  // --- Screenshot Viewer Logic ---
+  
   const fetchScreenshotsForImplant = async (implantIdToFetchFor) => {
-    if (!implantIdToFetchFor) return []; // Guard clause
+    if (!implantIdToFetchFor) return []; 
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API_BASE}/implants/${implantIdToFetchFor}/screenshots`, {
@@ -385,45 +385,45 @@ const closeFileExplorer = () => {
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: "Failed to parse error" }));
         console.error(`Failed to fetch screenshots for implant ${implantIdToFetchFor}: ${res.status} - ${errorData.error || res.statusText}`);
-        return screenshotViewerState.screenshots; // Return current state's screenshots on error to avoid clearing them
+        return screenshotViewerState.screenshots; 
       }
 
-      const data = await res.json(); // Expected: { screenshots: ScreenshotInfo[] }
+      const data = await res.json(); 
       const screenshotPaths = (data.screenshots || [])
-        .map(info => info.url_path) // e.g., "c2_screenshots/implant-id/file.png"
+        .map(info => info.url_path) 
         .filter(path => !!path && typeof path === 'string' && path.startsWith('c2_screenshots/'));
 
-      return screenshotPaths; // These should be sorted newest first by C2
+      return screenshotPaths; 
 
     } catch (error) {
       console.error(`Error fetching screenshot list for implant ${implantIdToFetchFor}:`, error);
-      return screenshotViewerState.screenshots; // Return current on network or parsing error
+      return screenshotViewerState.screenshots; 
     }
   };
   
-  // Effect for polling screenshots when viewer is open and active
+  
   useEffect(() => {
     if (screenshotViewerState.isOpen && screenshotViewerState.implantId) {
       const pollScreenshots = async () => {
-        if (document.hidden) return; // Don't poll if tab is not visible or active
+        if (document.hidden) return; 
 
         const newPaths = await fetchScreenshotsForImplant(screenshotViewerState.implantId);
         
         setScreenshotViewerState(prev => {
-          // Critical check: ensure the poll is for the currently active viewer state
+          
           if (!prev.isOpen || prev.implantId !== screenshotViewerState.implantId || prev.mode !== screenshotViewerState.mode) {
-            return prev; // State changed (e.g., viewer closed, different implant), stale poll
+            return prev; 
           }
-          // Only update if paths actually changed to prevent unnecessary re-renders
+          
           if (JSON.stringify(newPaths) !== JSON.stringify(prev.screenshots)) {
-            // console.log(`Updating screenshots for ${prev.implantId} in ${prev.mode} mode. Count: ${newPaths.length}`);
+            
             return { ...prev, screenshots: newPaths };
           }
-          return prev; // No change in paths
+          return prev; 
         });
       };
 
-      pollScreenshots(); // Initial poll when viewer opens or params (implantId/mode) change
+      pollScreenshots(); 
 
       const intervalTime = screenshotViewerState.mode === 'livestream' 
         ? SCREENSHOT_LIVESTREAM_REFRESH_INTERVAL 
@@ -432,39 +432,39 @@ const closeFileExplorer = () => {
       screenshotPollIntervalRef.current = setInterval(pollScreenshots, intervalTime);
     }
 
-    return () => { // Cleanup: clear interval when viewer closes or relevant state changes
+    return () => { 
       if (screenshotPollIntervalRef.current) {
         clearInterval(screenshotPollIntervalRef.current);
         screenshotPollIntervalRef.current = null;
       }
     };
-    // Dependencies ensure this effect re-runs if isOpen, implantId, or mode changes for the viewer
+    
   }, [screenshotViewerState.isOpen, screenshotViewerState.implantId, screenshotViewerState.mode]);
 
 
   const openScreenshotViewer = async (implantIdToView, initialPath = null, mode = 'gallery') => {
-    // Fetch initial set of screenshots immediately before opening
+    
     const paths = await fetchScreenshotsForImplant(implantIdToView);
 
     setScreenshotViewerState({
       isOpen: true,
       implantId: implantIdToView,
       screenshots: paths,
-      // For livestream, initialPath should always point to the newest if available (paths[0])
-      // For gallery, use provided initialPath or default to newest if not provided/invalid
+      
+      
       initialPath: (mode === 'livestream' || !initialPath || !paths.includes(initialPath)) && paths.length > 0 ? paths[0] : initialPath,
       mode: mode,
     });
-    // The useEffect hook for polling will automatically start based on the new state.
+    
   };
 
   const closeScreenshotViewer = () => {
-    // The ScreenshotViewer's internal onStreamStopRequested will be called on its unmount/close if needed.
-    // The polling useEffect will clear its interval when isOpen becomes false.
+    
+    
     setScreenshotViewerState({ isOpen: false, implantId: null, screenshots: [], initialPath: null, mode: 'gallery' });
   };
 
-  // Handler for when ScreenshotViewer requests a stream stop (e.g., on its close)
+  
   const handleStreamStopRequested = async (implantIdToStop) => {
     if (implantIdToStop) {
       await sendDashboardCommand(implantIdToStop, "livestream_stop");
@@ -472,21 +472,21 @@ const closeFileExplorer = () => {
     }
   };
 
-  // Button handler for the "Screenshots" button (opens in gallery mode)
+  
   const handleViewScreenshotsButton = (implantToken) => {
     openScreenshotViewer(implantToken, null, 'gallery');
   };
 
-  // Button handler for "Start Stream"
+  
   const handleStartStreamButton = async (implantToken) => {
     const success = await sendDashboardCommand(implantToken, "livestream_start");
     if (success) {
-      // Open viewer in livestream mode immediately after sending command
+      
       openScreenshotViewer(implantToken, null, 'livestream');
     }
   };
   
-  // "Stop Stream" button is removed from table; handled by ScreenshotViewer close
+  
 
   return (
     <>
@@ -525,7 +525,7 @@ const closeFileExplorer = () => {
         screenshots={screenshotViewerState.screenshots}
         initialScreenshotPath={screenshotViewerState.initialPath}
         mode={screenshotViewerState.mode}
-        onStreamStopRequested={handleStreamStopRequested} // Pass the handler
+        onStreamStopRequested={handleStreamStopRequested} 
       />
 
       {fileExplorerState.isOpen && fileExplorerState.implantId && (
@@ -740,7 +740,7 @@ const closeFileExplorer = () => {
             <Terminal
               implantID={selectedImplantForTerminal}
               onClose={handleCloseTerminal}
-              openScreenshotViewer={openScreenshotViewer} // Pass for terminal to open screenshot viewer
+              openScreenshotViewer={openScreenshotViewer} 
               extractScreenshotPathFromCmdOutput={
                 extractScreenshotPathFromCmdOutput
               }

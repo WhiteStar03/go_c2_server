@@ -53,7 +53,7 @@ export default function Terminal({ implantID, onClose, openScreenshotViewer }) {
         );
         if (!res.ok) {
           console.error(`Error fetching logs: ${res.status} ${res.statusText}`);
-          if (res.status === 404) polling.current = false; // Stop if implant gone
+          if (res.status === 404) polling.current = false; 
           return;
         }
         const { commands } = await res.json();
@@ -90,7 +90,7 @@ export default function Terminal({ implantID, onClose, openScreenshotViewer }) {
       }
     }
     fetchLogs();
-    const intervalId = setInterval(fetchLogs, 2500); // Poll slightly more frequently
+    const intervalId = setInterval(fetchLogs, 2500); 
     return () => {
       polling.current = false;
       clearInterval(intervalId);
@@ -123,7 +123,7 @@ export default function Terminal({ implantID, onClose, openScreenshotViewer }) {
             log.id === optimisticId ? {...log, output: errorMessage, status: "error"} : log
         ));
       }
-      // Poller will update with actual result
+      
     } catch (err) {
       const errorMessage = `Error: ${err.message || "Network error"}`;
       setLogs(prevLogs => prevLogs.map(log => 
@@ -151,7 +151,7 @@ export default function Terminal({ implantID, onClose, openScreenshotViewer }) {
             </button>
         );
     } else if (log.command === 'screenshot' && log.status === 'executed' && !log.screenshotPath) {
-        // Handle cases where screenshot command was executed but no path was found (e.g., error message from C2)
+        
         outputDisplay = <span className="text-yellow-400">{log.output || "Screenshot command processed, but no image path found."}</span>;
     } else if (log.status === 'pending' && (log.output === '…waiting for output…' || log.output === '…sending command…')) {
       outputDisplay = <span className="text-yellow-400 italic">{log.output}</span>;

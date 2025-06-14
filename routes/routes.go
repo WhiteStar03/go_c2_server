@@ -11,7 +11,7 @@ import (
 func SetupRouter() *gin.Engine {
 	r := gin.Default()
 
-	absScreenshotPath, _ := filepath.Abs("./c2_screenshots") // Get absolute path
+	absScreenshotPath, _ := filepath.Abs("./c2_screenshots")
 	r.StaticFS("/c2_screenshots", gin.Dir(absScreenshotPath, false))
 
 	r.POST("/checkin", controllers.CheckinImplant)
@@ -31,7 +31,7 @@ func SetupRouter() *gin.Engine {
 		protected.GET("/implants/:implant_id/commands", controllers.DashboardGetCommandsForImplant)
 		protected.DELETE("/implants/:implant_id", controllers.DeleteImplant)
 		protected.POST("/implants/:implant_id/download-configured", controllers.DownloadConfiguredImplant)
-		protected.GET("/implants/:implant_id/download", controllers.DownloadImplant) // Legacy/generic
+		protected.GET("/implants/:implant_id/download", controllers.DownloadImplant)
 		protected.GET("/implants/:implant_id/screenshots", controllers.GetScreenshotsForImplant)
 	}
 

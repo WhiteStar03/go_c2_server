@@ -28,7 +28,7 @@ const formatSize = (bytes) => {
 
 function FileSystemExplorer({ implantID, onClose, displayNotification }) {
   const [currentPath, setCurrentPath] = useState("__ROOTS__");
-  const [loadedPath, setLoadedPath] = useState(null); // <--- NEW: Track successfully loaded path
+  const [loadedPath, setLoadedPath] = useState(null); 
   const [isInitiallyLoading, setIsInitiallyLoading] = useState(true);
   const [isManuallyRefreshing, setIsManuallyRefreshing] = useState(false);
   const [entries, setEntries] = useState([]);
@@ -43,22 +43,22 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
 
   const token = localStorage.getItem("token");
 
-  // If not, `sendBrowseCommand` and `pollForResult` will be recreated too often.
+  
 
   const sendBrowseCommand = useCallback(async (path, isPathChangeOperation = true) => {
-    // `isPathChangeOperation` is true for initial load or directory navigation,
-    // false for manual refresh of the current directory.
+    
+    
     if (isPathChangeOperation) {
-      setEntries([]); // Clear old entries
-      setIsInitiallyLoading(true); // Show main loading indicator
-      setIsManuallyRefreshing(false); // Ensure manual refresh spinner is off
+      setEntries([]); 
+      setIsInitiallyLoading(true); 
+      setIsManuallyRefreshing(false); 
       setError(null);
-    } else { // Manual refresh
-      // Don't clear entries immediately for manual refresh, looks better.
-      // Entries will update on success.
+    } else { 
+      
+      
       setIsManuallyRefreshing(true);
-      setIsInitiallyLoading(false); // Ensure main loading indicator is off
-      setError(null); // Clear error before refresh attempt
+      setIsInitiallyLoading(false); 
+      setError(null); 
     }
 
     const commandStr = `fs_browse {"path":"${path.replace(/\\/g, '\\\\')}"}`;
@@ -79,7 +79,7 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
       if (isMountedRef.current) {
         const errorMsg = `Browse request failed: ${err.message}`;
         setError(errorMsg);
-        setLoadedPath(path); // Mark as "attempted to load" to prevent immediate retry for this path by main useEffect
+        setLoadedPath(path); 
         if (isPathChangeOperation) setIsInitiallyLoading(false);
         setIsManuallyRefreshing(false);
         displayNotification(`Browse request for ${path} failed: ${err.message}`, "error");
@@ -88,20 +88,20 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
   }, [implantID, token, displayNotification]);
 
   const sendDownloadCommand = useCallback(async (filePath, fileNameForDownload) => {
-    // For downloads, we can use isInitiallyLoading as a general "operation in progress" indicator
-    // or introduce a new state like `isDownloadingVisual`.
-    // Using `isInitiallyLoading` might make the main "Loading entries..." appear, which might be confusing.
-    // Let's assume for now it's acceptable or you'll refine this part.
-    // For simplicity, we'll keep isInitiallyLoading for now, but ensure it's handled.
-    // A dedicated downloading spinner near the file or global is better.
-    // For now, the button disabling provides feedback.
+    
+    
+    
+    
+    
+    
+    
 
-    // setError(null); // No, keep existing directory error if any
+    
     const commandStr = `fs_download {"path":"${filePath.replace(/\\/g, '\\\\')}"}`;
     try {
-      // If you don't want the main "Loading entries..." screen for downloads, avoid setIsInitiallyLoading(true) here.
-      // Instead, manage a specific download pending state if needed.
-      // For now, let's focus on browse.
+      
+      
+      
       displayNotification(`Requesting download: ${fileNameForDownload}...`, "info");
 
       const res = await fetch(`${API_BASE}/send-command`, { 
@@ -113,14 +113,14 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
       if (!res.ok) throw new Error(data.error || `Failed to send download command (status ${res.status})`);
 
       if (isMountedRef.current) {
-        setActivePollId(data.command_id); // This will trigger polling effect
+        setActivePollId(data.command_id); 
         setDownloadingFile({ path: filePath, commandId: data.command_id, name: fileNameForDownload });
       }
     } catch (err) {
       console.error(`Error sending download command:`, err);
       if (isMountedRef.current) {
-        // setError(`Download request failed: ${err.message}`); // Avoid overwriting directory error
-        // setIsInitiallyLoading(false); // Only if set true above
+        
+        
         displayNotification(`Download request for ${fileNameForDownload} failed: ${err.message}`, "error");
       }
     }
@@ -144,11 +144,11 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
 
       if (cmd && cmd.id === activePollId) {
         if (cmd.status === 'executed') {
-          setActivePollId(null); // Clear first
+          setActivePollId(null); 
           setLastUpdateTime(new Date());
 
           if (isDownloadPoll) {
-            // ... (download logic as before) ...
+            
             if (cmd.output.startsWith("file_data_b64:")) {
                 const base64Data = cmd.output.substring("file_data_b64:".length);
                 try {
@@ -172,94 +172,94 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
                 displayNotification(`Download error for ${downloadingFile.name}: ${cmd.output}`, "error");
             }
             setDownloadingFile(null);
-            // No change to isInitiallyLoading or isManuallyRefreshing here for downloads
-          } else { // Directory listing
-            setIsInitiallyLoading(false); // For path changes
-            setIsManuallyRefreshing(false); // For manual refreshes
+            
+          } else { 
+            setIsInitiallyLoading(false); 
+            setIsManuallyRefreshing(false); 
             try {
               const listing = JSON.parse(cmd.output);
               if (listing.error) {
                 setError(listing.error);
-                setEntries([]); // Clear entries on error
+                setEntries([]); 
                 displayNotification(`Browse error for ${listing.requested_path}: ${listing.error}`, "error");
-                setLoadedPath(listing.requested_path); // Mark as "loaded" (even if error) to stop main useEffect retrying
+                setLoadedPath(listing.requested_path); 
               } else {
                 setEntries(listing.entries || []);
                 setError(null);
-                setLoadedPath(listing.requested_path); // <--- Mark this path as successfully loaded
+                setLoadedPath(listing.requested_path); 
                 if (listing.requested_path !== currentPath) {
                   pathUpdateFromPoll.current = true;
-                  setCurrentPath(listing.requested_path); // Normalize currentPath if needed
+                  setCurrentPath(listing.requested_path); 
                 }
               }
             } catch (e) {
               setError("Unparsable data from implant.");
               setEntries([]);
               displayNotification("Error: Unparsable data for listing.", "error");
-              // How to set loadedPath here? We don't know the requested_path from the unparsable data.
-              // Perhaps set loadedPath to currentPath to signify an attempt was made.
+              
+              
               setLoadedPath(currentPath);
             }
           }
         } else if (cmd.status === 'pending') {
-          // Keep polling...
-          // If it's a browse command (not download) and it was a path change (isInitiallyLoading was true)
-          // or manual refresh (isManuallyRefreshing was true), ensure the correct spinner is active.
-          // The states are already set, so this is fine.
-        } else { // Error status from implant command
+          
+          
+          
+          
+        } else { 
           setActivePollId(null);
           const errorMsg = `Command error for ${cmd.id.substring(0,8)} (${cmd.status}): ${cmd.output || 'No output'}`;
           displayNotification(isDownloadPoll ? `Download ${downloadingFile?.name || 'file'} failed: ${errorMsg}` : `Browse failed: ${errorMsg}`, "error");
           
           if (isDownloadPoll) {
             setDownloadingFile(null);
-          } else { // Browse command error
+          } else { 
             setError(errorMsg);
             setEntries([]);
             setIsInitiallyLoading(false);
             setIsManuallyRefreshing(false);
-            setLoadedPath(currentPath); // Mark current path as "attempted" to prevent main useEffect retrying
+            setLoadedPath(currentPath); 
           }
         }
       }
     } catch (err) {
       console.error("Unhandled error polling for result:", err);
       if (isMountedRef.current) {
-        // Potentially set a general polling error, but be cautious not to overwrite specific command errors
-        // For now, just ensure loading states are reset if a poll itself fails badly.
-        setIsInitiallyLoading(false); // Defensive reset
-        setIsManuallyRefreshing(false); // Defensive reset
+        
+        
+        setIsInitiallyLoading(false); 
+        setIsManuallyRefreshing(false); 
       }
     }
-  }, [implantID, token, displayNotification, downloadingFile, activePollId, currentPath]); // currentPath needed for setLoadedPath on error/unparsable
+  }, [implantID, token, displayNotification, downloadingFile, activePollId, currentPath]); 
 
-  // Effect for initial load and when currentPath changes (navigating to a new directory)
+  
   useEffect(() => {
     isMountedRef.current = true;
 
     if (pathUpdateFromPoll.current) {
-      pathUpdateFromPoll.current = false; // Reset flag and skip sending command
+      pathUpdateFromPoll.current = false; 
       return;
     }
 
-    // Only send browse command if:
-    // 1. The currentPath hasn't been successfully loaded yet OR it's the very first load (loadedPath is null).
-    // 2. There isn't already an active command being polled.
-    // 3. The component is mounted.
+    
+    
+    
+    
     if ((currentPath !== loadedPath || loadedPath === null) && !activePollId && isMountedRef.current) {
-        sendBrowseCommand(currentPath, true); // true indicates it's a path change or initial load
+        sendBrowseCommand(currentPath, true); 
     }
 
     return () => { isMountedRef.current = false; };
-  }, [currentPath, loadedPath, activePollId, sendBrowseCommand]); // Dependencies that control the fetch logic.
-                                                                   // sendBrowseCommand is here because it's called.
-                                                                   // If displayNotification causes sendBrowseCommand to be unstable, this is an issue.
+  }, [currentPath, loadedPath, activePollId, sendBrowseCommand]); 
+                                                                   
+                                                                   
 
-  // Polling interval management
+  
   useEffect(() => {
     if (activePollId && isMountedRef.current) {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-      pollForResult(activePollId); // Initial immediate poll
+      pollForResult(activePollId); 
       pollIntervalRef.current = setInterval(() => {
         if (isMountedRef.current && activePollId) {
           pollForResult(activePollId);
@@ -271,7 +271,7 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     }
     return () => { if (pollIntervalRef.current) clearInterval(pollIntervalRef.current); };
-  }, [activePollId, pollForResult]); // pollForResult is stable due to useCallback
+  }, [activePollId, pollForResult]); 
 
   const handleEntryClick = (entry) => {
     if (activePollId || downloadingFile) {
@@ -279,8 +279,8 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
         return;
     }
     if (entry.is_dir) {
-      if (currentPath !== entry.path) { // Only navigate if it's a new path
-        setCurrentPath(entry.path); // This will trigger the main useEffect
+      if (currentPath !== entry.path) { 
+        setCurrentPath(entry.path); 
       }
     } else {
       sendDownloadCommand(entry.path, entry.name);
@@ -313,8 +313,8 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
             parentPath = "__ROOTS__"; 
         }
     }
-    if (currentPath !== parentPath) { // Only navigate if it's a new path
-        setCurrentPath(parentPath); // This will trigger the main useEffect
+    if (currentPath !== parentPath) { 
+        setCurrentPath(parentPath); 
     }
   };
 
@@ -324,17 +324,17 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
         return;
     }
     displayNotification(`Refreshing ${currentPath === "__ROOTS__" ? "Roots" : currentPath}...`, "info", 2000);
-    // For manual refresh, we want to force a load, so we bypass the `loadedPath` check
-    // by directly calling sendBrowseCommand.
-    // We also might want to reset `loadedPath` for `currentPath` so that if the user navigates away and back,
-    // it reloads, but `sendBrowseCommand` handles the loading state.
-    // setLoadedPath(null); // This might be too aggressive, let sendBrowseCommand handle it.
-    sendBrowseCommand(currentPath, false); // false indicates it's a manual refresh
+    
+    
+    
+    
+    
+    sendBrowseCommand(currentPath, false); 
   };
 
-  // ... JSX remains largely the same ...
-  // Make sure to use isInitiallyLoading for the main "Loading entries..."
-  // and isManuallyRefreshing for the small spinner near the refresh button.
+  
+  
+  
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[120]" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
@@ -343,7 +343,7 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
           <h3 className="text-lg md:text-xl font-semibold">File Explorer: <span className="font-mono text-sm text-blue-400">{implantID}</span></h3>
           <div className="flex items-center">
             {/* Spinner for manual refresh */}
-            {isManuallyRefreshing && !isInitiallyLoading && ( // Show only if not also initial loading
+            {isManuallyRefreshing && !isInitiallyLoading && ( 
                 <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mr-3"></div>
             )}
              {lastUpdateTime && !isManuallyRefreshing && !isInitiallyLoading && !error && (
@@ -422,7 +422,7 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
                     return a.name.localeCompare(b.name);
                 }).map((entry) => (
                   <tr 
-                    key={entry.path || `${currentPath}_${entry.name}_${entry.is_dir}`} // Make key more unique
+                    key={entry.path || `${currentPath}_${entry.name}_${entry.is_dir}`} 
                     className={`hover:bg-gray-700/80 ${(entry.is_dir && !(activePollId || downloadingFile || isInitiallyLoading || isManuallyRefreshing)) ? 'cursor-pointer' : 'cursor-default'}`}
                     onClick={() => entry.is_dir && !(isInitiallyLoading || isManuallyRefreshing) && handleEntryClick(entry)}
                     title={entry.is_dir ? `Browse: ${entry.name}` : `File: ${entry.name}`}
