@@ -1,6 +1,6 @@
 module.exports = {
   content: [
-    "./src/**/*.{js,jsx,ts,tsx}", // Ensure this includes all your React components
+    "./src/**/*.{js,jsx,ts,tsx}", 
   ],
   theme: {
     extend: {},

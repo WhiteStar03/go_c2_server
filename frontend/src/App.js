@@ -1,4 +1,4 @@
-// c2client/src/App.js
+
 import React, { useState, useEffect } from 'react'; 
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import AuthForm from './components/AuthForm';
@@ -38,10 +38,6 @@ function App() {
     handleSetToken(null); 
     navigate('/login');
   };
-
-  // If you want to protect routes, you'd typically wrap them
-  // or check token in a useEffect within Dashboard.
-  // For simplicity, this example keeps Dashboard accessible but it would fetch data using the token.
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">

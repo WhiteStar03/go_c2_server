@@ -30,7 +30,6 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Start the server
 	fmt.Println("Server running on port 8080")
 	r.Run(":8080")
 }

@@ -1,4 +1,3 @@
-// models/screenshot_info.go
 package models
 
 import "time"

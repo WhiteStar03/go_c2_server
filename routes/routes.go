@@ -1,10 +1,9 @@
-// Package routes awesomeProject/routes/routes.go
 package routes
 
 import (
 	"awesomeProject/controllers"
 	"awesomeProject/middleware"
-	"path/filepath" 
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +22,6 @@ func SetupRouter() *gin.Engine {
 	r.POST("/register", controllers.Register)
 	r.POST("/login", controllers.Login)
 
-	// Protected routes (Dashboard)
 	protected := r.Group("/api")
 	protected.Use(middleware.AuthMiddleware())
 	{

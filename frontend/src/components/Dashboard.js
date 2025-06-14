@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
-import Terminal from "../components/Terminal"; // Adjust path if needed
-import DownloadOptionsModal from "../components/DownloadOptionsModal"; // Adjust path
-import GenerateImplantOSModal from "./GenerateImplantOSModal.js"; // Adjust path
-import ScreenshotViewer from "../components/ScreenshotViewer"; // Adjust path
-import FileSystemExplorer from '../components/FileSystemExplorer'; // Adjust path if needed
+import Terminal from "../components/Terminal"; 
+import DownloadOptionsModal from "../components/DownloadOptionsModal"; 
+import GenerateImplantOSModal from "./GenerateImplantOSModal.js"; 
+import ScreenshotViewer from "../components/ScreenshotViewer";
+import FileSystemExplorer from '../components/FileSystemExplorer'; 
 
 
 const API_BASE = "/api";
@@ -12,7 +12,7 @@ const SCREENSHOT_GALLERY_REFRESH_INTERVAL = 3000; // For gallery mode viewer pol
 const SCREENSHOT_LIVESTREAM_REFRESH_INTERVAL = 1000; // For livestream mode viewer polling (1s)
 const GLOBAL_C2_IP_KEY = 'dashboardGlobalC2IP';
 
-// --- Notification Component ---
+
 function Notification({ message, type, onClose, Icon: IconComponent }) {
   const isVisible = !!message;
   const baseStyle = "fixed top-5 right-5 p-4 rounded-lg shadow-xl text-white z-[200] flex items-center transition-all duration-300 ease-in-out transform";
@@ -38,7 +38,7 @@ function Notification({ message, type, onClose, Icon: IconComponent }) {
   );
 }
 
-// --- Default Icon for Notification ---
+
 const DefaultIcon = ({ type }) => {
     if (type === 'success') {
       return (
@@ -58,7 +58,7 @@ const DefaultIcon = ({ type }) => {
 };
 Notification.Icon = DefaultIcon;
 
-// --- Delete Confirmation Modal ---
+
 function DeleteConfirmationModal({ isOpen, onClose, onConfirm, implantToken }) {
     if (!isOpen) return null;
     return (
@@ -98,7 +98,7 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, implantToken }) {
     );
 }
 
-// --- Helper to extract screenshot path from command output ---
+
 const extractScreenshotPathFromCmdOutput = (output) => {
     if (typeof output !== 'string') return null;
     // Regex for "Screenshot saved to C2 server at: c2_screenshots/UUID/filename.png"
@@ -144,7 +144,7 @@ function Dashboard() {
   implantId: null,
 });
 
-// Inside Dashboard function
+
 const openFileExplorer = (implantToken) => {
   setFileExplorerState({ isOpen: true, implantId: implantToken });
 };

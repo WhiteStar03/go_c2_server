@@ -1,6 +1,5 @@
 //go:build !linux && !windows
 
-// implant/platform_unsupported.go
 package main
 
 import (
@@ -9,8 +8,6 @@ import (
 )
 
 func init() {
-	// Provide default/fallback implementations if no OS-specific one is loaded.
-	// This prevents nil pointer dereferences if functions are called on an unsupported OS.
 
 	if takeScreenshot == nil {
 		takeScreenshot = func() (string, error) {

@@ -6,11 +6,10 @@ function DownloadOptionsModal({ isOpen, onClose, onConfirm, implantToken, target
 
   useEffect(() => {
     if (isOpen) {
-      // Pre-fill with defaultC2IP if provided, otherwise, it will be empty.
       setC2IP(defaultC2IP || '');
       setError('');
     }
-  }, [isOpen, implantToken, defaultC2IP]); // Ensured defaultC2IP is in dependency array
+  }, [isOpen, implantToken, defaultC2IP]); 
 
   if (!isOpen) return null;
 

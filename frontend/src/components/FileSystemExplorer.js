@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 const API_BASE = "/api";
 
-// ... (getEntryIcon and formatSize remain the same)
+
 const getEntryIcon = (isDir, fileName) => {
   if (isDir) return <span className="mr-2 text-yellow-500">📁</span>;
   const ext = fileName.split('.').pop()?.toLowerCase();

