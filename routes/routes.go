@@ -4,7 +4,7 @@ package routes
 import (
 	"awesomeProject/controllers"
 	"awesomeProject/middleware"
-	"path/filepath" // NEW IMPORT
+	"path/filepath" 
 
 	"github.com/gin-gonic/gin"
 )

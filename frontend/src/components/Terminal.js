@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-// import ScreenshotViewer from './ScreenshotViewer'; // Import the new component
 
-// API_BASE and CloseIcon remain the same from your provided code
 
 const API_BASE = "/api";
 const CloseIcon = () => (
@@ -17,29 +15,24 @@ const CloseIcon = () => (
   </svg>
 );
 
-// New helper to extract screenshot path
 const extractScreenshotPath = (output) => {
-    // Example output from C2: "Screenshot saved to C2 server at: c2_screenshots/implant-token/file.png"
-    // Example output from implant (if not processed by C2 yet or direct display): "screenshot_data:BASE64..."
-    // Example error: "Screenshot failed: some error"
+
     if (typeof output !== 'string') return null;
 
     const c2PathMatch = output.match(/Screenshot saved to C2 server at: (c2_screenshots\/[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+\.png)/);
     if (c2PathMatch && c2PathMatch[1]) {
         return c2PathMatch[1];
     }
-    // Could add more patterns here if screenshot data is handled differently in other cases
     return null;
 };
 
 
-export default function Terminal({ implantID, onClose, openScreenshotViewer }) { // Added openScreenshotViewer prop
+export default function Terminal({ implantID, onClose, openScreenshotViewer }) { 
   const [logs, setLogs] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const polling = useRef(true);
   const containerRef = useRef(null);
-  // No need for ScreenshotViewer state here, it will be managed by Dashboard
 
   useEffect(() => {
     if (containerRef.current) {

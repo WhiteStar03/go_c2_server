@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-// Added defaultC2IP prop
 function DownloadOptionsModal({ isOpen, onClose, onConfirm, implantToken, targetOS, defaultC2IP }) {
   const [c2IP, setC2IP] = useState('');
   const [error, setError] = useState('');

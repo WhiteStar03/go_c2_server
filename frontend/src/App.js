@@ -1,5 +1,5 @@
 // c2client/src/App.js
-import React, { useState, useEffect } from 'react'; // Added useEffect
+import React, { useState, useEffect } from 'react'; 
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import AuthForm from './components/AuthForm';
 import Dashboard from './components/Dashboard';

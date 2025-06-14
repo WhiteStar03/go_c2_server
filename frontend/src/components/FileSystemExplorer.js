@@ -43,7 +43,6 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
 
   const token = localStorage.getItem("token");
 
-  // IMPORTANT: Ensure `displayNotification` prop is stable (memoized with useCallback in parent)
   // If not, `sendBrowseCommand` and `pollForResult` will be recreated too often.
 
   const sendBrowseCommand = useCallback(async (path, isPathChangeOperation = true) => {
