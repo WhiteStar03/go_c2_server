@@ -22,7 +22,7 @@ services:
       dockerfile: Dockerfile
     container_name: go-backend
     restart: unless-stopped
-    depends_on: # Ensure db starts before backend (though app should still handle connection retries)
+    depends_on: #  Ensure db starts before backend (though app should still handle connection retries)
       - db
     environment:
       DB_HOST: db
