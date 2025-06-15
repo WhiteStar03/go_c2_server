@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import AuthForm from './components/AuthForm';
 import Dashboard from './components/Dashboard';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function Home() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ function Home() {
     if (token) {
       navigate('/dashboard');
     } else {
-      navigate('/login');
+      navigate('/');
     }
   }, [navigate, token]);
 
@@ -36,7 +37,7 @@ function App() {
   
   const logout = () => {
     handleSetToken(null); 
-    navigate('/login');
+    navigate('/');
   };
 
   return (
@@ -63,7 +64,11 @@ function App() {
         <Route path="/" element={<Home />} /> 
         <Route path="/login" element={<AuthForm isLogin={true} setToken={handleSetToken} />} />
         <Route path="/register" element={<AuthForm isLogin={false} setToken={handleSetToken} />} /> {/* Assuming register might also log in */}
-        <Route path="/dashboard" element={<Dashboard token={token} />} /> {/* Pass token if Dashboard needs it directly */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard token={token} />
+          </ProtectedRoute>
+        } /> {/* Pass token if Dashboard needs it directly */}
       </Routes>
     </div>
   );

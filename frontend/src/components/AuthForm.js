@@ -22,9 +22,13 @@ function AuthForm({ isLogin, setToken }) {
 
     const data = await response.json();
     if (response.ok) {
-      setToken(data.token);
-      localStorage.setItem("token", data.token);
-      navigate("/dashboard");
+      if (isLogin) {
+        setToken(data.token);
+        localStorage.setItem("token", data.token);
+        navigate("/dashboard");
+      } else {
+        navigate("/");
+      }
     } else {
       setError(data.error || "An error occurred");
     }
