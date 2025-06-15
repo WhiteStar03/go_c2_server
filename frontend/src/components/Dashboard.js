@@ -14,6 +14,10 @@ const GLOBAL_C2_IP_KEY = 'dashboardGlobalC2IP';
 const hostname = window.location.hostname; 
 const port = 8080; 
 const determinedC2 = `${hostname}:${port}`;
+
+// Debug logging to see what values we're getting
+console.log('Dashboard - hostname:', hostname);
+console.log('Dashboard - determinedC2:', determinedC2);
 function Notification({ message, type, onClose, Icon: IconComponent }) {
   const isVisible = !!message;
   const baseStyle = "fixed top-5 right-5 p-4 rounded-lg shadow-xl text-white z-[200] flex items-center transition-all duration-300 ease-in-out transform";
@@ -165,6 +169,9 @@ const closeFileExplorer = () => {
 
   useEffect(() => {
     const savedC2IP = localStorage.getItem(GLOBAL_C2_IP_KEY);
+    console.log('Dashboard useEffect - savedC2IP from localStorage:', savedC2IP);
+    console.log('Dashboard useEffect - determinedC2:', determinedC2);
+    
     if (savedC2IP) {
       setGlobalC2IP(savedC2IP);
       setInputGlobalC2IP(savedC2IP);
@@ -303,11 +310,15 @@ const closeFileExplorer = () => {
   const performConfiguredDownload = async (implantTokenForAPI, targetOSForFilename, c2IP) => {
     const authToken = localStorage.getItem("token");
     const endpoint = `${API_BASE}/implants/${implantTokenForAPI}/download-configured`;
+    
+    // Strip protocol from C2 IP if it exists - backend only needs IP/domain:port
+    const cleanC2IP = c2IP.replace(/^https?:\/\//, '');
+    
     try {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ c2_ip: c2IP }),
+        body: JSON.stringify({ c2_ip: cleanC2IP }),
       });
       if (!res.ok) {
         const errorData = await res.json().catch(() => null); 
