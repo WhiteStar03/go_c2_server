@@ -269,7 +269,7 @@ const closeFileExplorer = () => {
     const trimmedC2IP = inputGlobalC2IP.trim();
     if (trimmedC2IP === "") {
         localStorage.removeItem(GLOBAL_C2_IP_KEY);
-        setGlobalC2IP("");
+        setGlobalC2IP(determinedC2);
         displayNotification("Default C2 IP set", "success");
         return;
     }
