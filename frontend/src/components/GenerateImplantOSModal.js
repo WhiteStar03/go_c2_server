@@ -34,7 +34,7 @@ function GenerateImplantOSModal({ isOpen, onClose, onConfirm, selectedOS, setSel
                 value="windows"
                 checked={selectedOS === "windows"}
                 onChange={(e) => setSelectedOS(e.target.value)}
-                className="form-radio h-5 w-5 text-indigo-600 border-gray-300 focus:ring-indigo-500 mr-3"
+                className="h-5 w-5 text-indigo-600 border-gray-300 focus:ring-indigo-500 mr-3"
               />
               <span className="text-gray-700 font-medium">Windows</span>
             </label>
@@ -48,7 +48,7 @@ function GenerateImplantOSModal({ isOpen, onClose, onConfirm, selectedOS, setSel
                 value="linux"
                 checked={selectedOS === "linux"}
                 onChange={(e) => setSelectedOS(e.target.value)}
-                className="form-radio h-5 w-5 text-indigo-600 border-gray-300 focus:ring-indigo-500 mr-3"
+                className="h-5 w-5 text-indigo-600 border-gray-300 focus:ring-indigo-500 mr-3"
               />
               <span className="text-gray-700 font-medium">Linux</span>
             </label>
