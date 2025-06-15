@@ -12,7 +12,7 @@ code {
     monospace;
 }
 
-/* src/index.css or similar */
+/* custom scrollbar styles because default ones are ugly */
 
 /* For WebKit browsers (Chrome, Safari, Edge) */
 /* Style the main scrollable area in the FileSystemExplorer */

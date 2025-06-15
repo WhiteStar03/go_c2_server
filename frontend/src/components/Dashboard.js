@@ -14,8 +14,7 @@ const GLOBAL_C2_IP_KEY = 'dashboardGlobalC2IP';
 const hostname = window.location.hostname; 
 const port = 8080; 
 const determinedC2 = `${hostname}:${port}`;
-console.log("Determined C2 IP:", determinedC2);
- // github actions are pretty cool ngl
+ // Added github actions yooo
 function Notification({ message, type, onClose, Icon: IconComponent }) {
   const isVisible = !!message;
   const baseStyle = "fixed top-5 right-5 p-4 rounded-lg shadow-xl text-white z-[200] flex items-center transition-all duration-300 ease-in-out transform";
@@ -168,8 +167,8 @@ const closeFileExplorer = () => {
   useEffect(() => {
     const savedC2IP = localStorage.getItem(GLOBAL_C2_IP_KEY);
     if (savedC2IP) {
-      setGlobalC2IP(savedC2IP);
-      setInputGlobalC2IP(savedC2IP);
+      setGlobalC2IP(determinedC2);
+      setInputGlobalC2IP(determinedC2);
     } else {
       setGlobalC2IP(determinedC2);
       setInputGlobalC2IP(determinedC2);

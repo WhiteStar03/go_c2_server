@@ -58,6 +58,8 @@ func generateLegitLookingName() string {
 }
 
 /*
+this was supposed to overwrite argv but turns out it's pretty tricky
+keeping it here in case i want to revisit later
 func overwriteArgv(newName string) {
 	args := os.Args
 	if len(args) == 0 {
@@ -72,9 +74,8 @@ func overwriteArgv(newName string) {
 		}
 	}
 
-
-
-
+	// yeah this doesn't work as expected because go manages argv differently
+	// would need to go deeper into runtime stuff which is overkill for now
 
 }
 */

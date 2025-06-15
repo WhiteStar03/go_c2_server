@@ -137,7 +137,7 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!isMountedRef.current) return;
-      if (!res.ok) { /* Handle network error during poll if needed, maybe retry */ return; }
+      if (!res.ok) { /* network error during poll, could retry but whatever */ return; }
 
       const data = await res.json();
       const cmd = data.commands?.find(c => c.id === cmdIdToPoll);
@@ -342,7 +342,7 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
         <div className="flex justify-between items-center mb-3 md:mb-4">
           <h3 className="text-lg md:text-xl font-semibold">File Explorer: <span className="font-mono text-sm text-blue-400">{implantID}</span></h3>
           <div className="flex items-center">
-            {/* Spinner for manual refresh */}
+            {/* spinner when manually refreshing */}
             {isManuallyRefreshing && !isInitiallyLoading && ( 
                 <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin mr-3"></div>
             )}
@@ -384,7 +384,7 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
             </button>
         </div>
 
-        {/* Main loading state for path changes / initial load */}
+        {/* loading spinner when switching directories */}
         {isInitiallyLoading && (
           <div className="text-center py-10 flex-grow flex flex-col justify-center items-center">
             Loading entries for {currentPath === "__ROOTS__" ? "Roots" : currentPath}...
@@ -392,18 +392,18 @@ function FileSystemExplorer({ implantID, onClose, displayNotification }) {
           </div>
         )}
         
-        {/* Error display, shown if not initial loading */}
+        {/* error display when things go wrong */}
         {error && !isInitiallyLoading && (
           <div className="text-center py-10 text-red-400 flex-grow flex flex-col justify-center items-center">Error: {error}</div>
         )}
         
-        {/* Empty directory message, shown if no initial load, no error, and no entries */}
+        {/* empty directory message */}
         {!isInitiallyLoading && !error && entries.length === 0 && (
           <div className="text-center py-10 text-gray-400 flex-grow flex flex-col justify-center items-center">Directory is empty or not accessible.</div>
         )}
 
-        {/* Entries table, shown if not initial load, no error, and entries exist */}
-        {/* Added !error condition for showing table */}
+        {/* file listing table */}
+        {/* only show when everything is loaded properly */}
         {!isInitiallyLoading && !error && entries.length > 0 && (
           <div className={`flex-grow overflow-auto border border-gray-700 rounded bg-gray-900/50 p-0.5 md:p-1 custom-scrollbar ${isManuallyRefreshing ? 'opacity-75' : ''}`}> 
             <table className="w-full text-xs md:text-sm table-fixed">
