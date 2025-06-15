@@ -167,8 +167,8 @@ const closeFileExplorer = () => {
   useEffect(() => {
     const savedC2IP = localStorage.getItem(GLOBAL_C2_IP_KEY);
     if (savedC2IP) {
-      setGlobalC2IP(determinedC2);
-      setInputGlobalC2IP(determinedC2);
+      setGlobalC2IP(savedC2IP);
+      setInputGlobalC2IP(savedC2IP);
     } else {
       setGlobalC2IP(determinedC2);
       setInputGlobalC2IP(determinedC2);

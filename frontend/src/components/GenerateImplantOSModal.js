@@ -36,7 +36,7 @@ function GenerateImplantOSModal({ isOpen, onClose, onConfirm, selectedOS, setSel
                 onChange={(e) => setSelectedOS(e.target.value)}
                 className="h-5 w-5 text-indigo-600 border-gray-300 focus:ring-indigo-500 mr-3"
               />
-              <span className="text-gray-700 font-medium select-none">Windows</span>
+              <span className="text-gray-700 font-medium select-none pointer-events-none">Windows</span>
             </label>
           </div>
           <div>
@@ -50,7 +50,7 @@ function GenerateImplantOSModal({ isOpen, onClose, onConfirm, selectedOS, setSel
                 onChange={(e) => setSelectedOS(e.target.value)}
                 className="h-5 w-5 text-indigo-600 border-gray-300 focus:ring-indigo-500 mr-3"
               />
-              <span className="text-gray-700 font-medium select-none">Linux</span>
+              <span className="text-gray-700 font-medium select-none pointer-events-none">Linux</span>
             </label>
           </div>
         </div>
