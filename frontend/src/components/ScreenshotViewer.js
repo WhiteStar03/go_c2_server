@@ -54,7 +54,6 @@ if (typeof window !== 'undefined') {
   determinedImageBaseUrl = `${protocol}//${hostname}:${imageServerPort}`;
 } else {
   
-  
   determinedImageBaseUrl = 'http://localhost:8080';
 }
 

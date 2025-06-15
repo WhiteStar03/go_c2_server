@@ -11,7 +11,10 @@ const REFRESH_INTERVAL = 5000;
 const SCREENSHOT_GALLERY_REFRESH_INTERVAL = 3000; 
 const SCREENSHOT_LIVESTREAM_REFRESH_INTERVAL = 1000; 
 const GLOBAL_C2_IP_KEY = 'dashboardGlobalC2IP';
-
+const protocol = window.location.protocol; 
+const hostname = window.location.hostname; 
+const port = 8080; 
+const determinedC2 = `${protocol}//${hostname}:${port}`;
 
 function Notification({ message, type, onClose, Icon: IconComponent }) {
   const isVisible = !!message;
@@ -167,6 +170,10 @@ const closeFileExplorer = () => {
     if (savedC2IP) {
       setGlobalC2IP(savedC2IP);
       setInputGlobalC2IP(savedC2IP);
+    } else {
+      // Use determinedC2 as default if no saved C2 IP
+      setGlobalC2IP(determinedC2);
+      setInputGlobalC2IP(determinedC2);
     }
     fetchImplants();
     const intervalId = setInterval(fetchImplants, REFRESH_INTERVAL);
@@ -264,7 +271,7 @@ const closeFileExplorer = () => {
     if (trimmedC2IP === "") {
         localStorage.removeItem(GLOBAL_C2_IP_KEY);
         setGlobalC2IP("");
-        displayNotification("Default C2 IP cleared.", "success");
+        displayNotification("Default C2 IP set", "success");
         return;
     }
     
