@@ -15,7 +15,7 @@ const protocol = window.location.protocol;
 const hostname = window.location.hostname; 
 const port = 8080; 
 const determinedC2 = `${hostname}:${port}`;
-//Testare deploy push secret o
+//Testare deploy push secret 1
 function Notification({ message, type, onClose, Icon: IconComponent }) {
   const isVisible = !!message;
   const baseStyle = "fixed top-5 right-5 p-4 rounded-lg shadow-xl text-white z-[200] flex items-center transition-all duration-300 ease-in-out transform";
