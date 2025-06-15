@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"awesomeProject/config"
-	"fmt"
 	"net/http"
 
 	"github.com/dgrijalva/jwt-go"
@@ -19,7 +18,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		tokenString = tokenString[7:]
-		fmt.Println(tokenString)
+		//fmt.Println(tokenString)
 
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			return config.JWTSecret, nil
