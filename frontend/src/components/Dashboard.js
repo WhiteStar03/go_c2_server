@@ -14,7 +14,7 @@ const GLOBAL_C2_IP_KEY = 'dashboardGlobalC2IP';
 const protocol = window.location.protocol; 
 const hostname = window.location.hostname; 
 const port = 8080; 
-const determinedC2 = `${hostname}:${port}`;
+const determinedC2 = `${hostname}:${port}t`;
 //Testare deploy push secret 1as23452 asssee
 function Notification({ message, type, onClose, Icon: IconComponent }) {
   const isVisible = !!message;
