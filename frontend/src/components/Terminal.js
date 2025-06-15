@@ -166,7 +166,7 @@ export default function Terminal({ implantID, onClose, openScreenshotViewer }) {
 
   return (
     <>
-      {/* ScreenshotViewer is now handled by Dashboard */}
+      {/* screenshot viewer handled by parent dashboard */}
       <div className="flex flex-col bg-gray-900 text-gray-100 rounded-xl shadow-2xl w-full max-w-3xl mx-auto h-[70vh] overflow-hidden">
         <div className="flex justify-between items-center bg-gray-800 px-4 py-3 border-b border-gray-700">
           <span className="font-semibold text-gray-300">Shell Access: {implantID}</span>

@@ -224,15 +224,15 @@ function ScreenshotViewer({
     
   }, [isOpen, mode, implantId]);
 
-  const handleNextGallery = () => { /* ... (same) ... */ 
+  const handleNextGallery = () => { // gallery navigation logic
     if (galleryImages.length === 0) return;
     setCurrentGalleryIndex((prevIndex) => (prevIndex + 1) % galleryImages.length);
   };
-  const handlePrevGallery = () => { /* ... (same) ... */ 
+  const handlePrevGallery = () => { // gallery navigation logic
     if (galleryImages.length === 0) return;
     setCurrentGalleryIndex((prevIndex) => (prevIndex - 1 + galleryImages.length) % galleryImages.length);
   };
-  const toggleSlideshow = () => { /* ... (same) ... */ 
+  const toggleSlideshow = () => { // slideshow controls
     if (galleryImages.length <= 1) return;
     if (isPlayingSlideshow) {
       clearInterval(slideshowIntervalRef.current);
@@ -245,7 +245,7 @@ function ScreenshotViewer({
     }
     setIsPlayingSlideshow(!isPlayingSlideshow);
   };
-  const handleImageError = (e, srcPath) => { /* ... (same) ... */ 
+  const handleImageError = (e, srcPath) => { // image error handling
     console.error("Error loading image:", srcPath, e);
     setErrorMessage(`Failed to load image: ${srcPath.split('/').pop()}`);
     setCurrentImageSrc('');
@@ -276,11 +276,11 @@ function ScreenshotViewer({
       className="fixed inset-0 bg-black bg-opacity-80 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-4 z-[200]"
       onClick={(e) => { if (e.target === e.currentTarget && !isFullScreen) onClose(); }} 
     >
-      {/* This ref'd div is what will go fullscreen */}
+      {/* this div handles fullscreen mode */}
       <div ref={viewerContentRef} className={`relative bg-gray-900 p-3 sm:p-4 rounded-lg shadow-2xl w-full flex flex-col 
         ${isFullScreen ? 'max-w-full max-h-full h-screen' : 'max-w-3xl max-h-[90vh]'}`}>
         
-        {/* Header */}
+        {/* header section */}
         <div className="flex justify-between items-center mb-3 pb-3 border-b border-gray-700">
           <h3 className="text-lg sm:text-xl font-semibold text-gray-100 truncate">
             {mode === 'livestream' ? 'Livestream' : 'Screenshots'} - <span className="font-mono text-xs sm:text-sm opacity-80">{implantId || "N/A"}</span>
@@ -301,7 +301,7 @@ function ScreenshotViewer({
           </div>
         </div>
 
-        {/* Image Display Area */}
+        {/* image display area */}
         <div className={`flex-grow flex items-center justify-center overflow-hidden relative bg-gray-800 rounded
             ${isFullScreen ? 'h-full' : 'min-h-[250px] sm:min-h-[300px]'}`}>
           {isLoadingInitial && <p className="text-gray-400 p-5">Loading...</p>}
@@ -328,7 +328,7 @@ function ScreenshotViewer({
            )}
         </div>
 
-        {/* Controls Area - Potentially hide or simplify in fullscreen */}
+        {/* controls area - might hide in fullscreen */}
         {!isFullScreen && (
             <div className="mt-3 pt-3 border-t border-gray-700">
                 {mode === 'gallery' && !isLoadingInitial && galleryImages.length > 0 && (

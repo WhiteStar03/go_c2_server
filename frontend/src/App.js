@@ -68,15 +68,15 @@ function App() {
         </div>
       </nav>
       <Routes>
-        {/* Add a root route */}
+        {/* main routes setup here */}
         <Route path="/" element={<Home />} /> 
         <Route path="/login" element={<AuthForm isLogin={true} setToken={handleSetToken} />} />
-        <Route path="/register" element={<AuthForm isLogin={false} setToken={handleSetToken} />} /> {/* Assuming register might also log in */}
+        <Route path="/register" element={<AuthForm isLogin={false} setToken={handleSetToken} />} /> {/* registration flow in case needed */}
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <Dashboard token={token} />
           </ProtectedRoute>
-        } /> {/* Pass token if Dashboard needs it directly */}
+        } /> {/* dashboard protected from unauthorized access */}
       </Routes>
     </div>
   );
