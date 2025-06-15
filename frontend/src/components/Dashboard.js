@@ -163,7 +163,7 @@ const closeFileExplorer = () => {
     if (notificationTimeoutRef.current) clearTimeout(notificationTimeoutRef.current);
     setNotification(prev => ({ ...prev, show: false }));
   };
-
+ 
   useEffect(() => {
     console.log('DEBUG: determinedC2 value:', determinedC2);
     const savedC2IP = localStorage.getItem(GLOBAL_C2_IP_KEY);
