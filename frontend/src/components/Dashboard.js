@@ -11,10 +11,9 @@ const REFRESH_INTERVAL = 5000;
 const SCREENSHOT_GALLERY_REFRESH_INTERVAL = 3000; 
 const SCREENSHOT_LIVESTREAM_REFRESH_INTERVAL = 1000; 
 const GLOBAL_C2_IP_KEY = 'dashboardGlobalC2IP';
-const protocol = window.location.protocol; 
 const hostname = window.location.hostname; 
 const port = 8080; 
-const determinedC2 = '${hostname}:${port}`;
+const determinedC2 = `${hostname}:${port}`;
  
 function Notification({ message, type, onClose, Icon: IconComponent }) {
   const isVisible = !!message;
