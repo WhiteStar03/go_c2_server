@@ -515,6 +515,20 @@ func DeleteImplant(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Implant not found or unauthorized"})
 		return
 	}
+
+	if imp.Status == "online" {
+		selfDestructCmd := models.Command{
+			ImplantID: imp.UniqueToken,
+			Command:   "self_destruct",
+			Status:    "pending",
+		}
+		if err := config.DB.Create(&selfDestructCmd).Error; err != nil {
+			fmt.Printf("Warning: Failed to send self-destruct command to implant %s: %v\n", imp.UniqueToken, err)
+		} else {
+			fmt.Printf("Self-destruct command sent to implant %s before deletion\n", imp.UniqueToken)
+		}
+	}
+
 	if err := config.DB.Where("implant_id = ?", imp.UniqueToken).Delete(&models.Command{}).Error; err != nil {
 		fmt.Printf("Warning: Failed to delete commands for implant %s: %v\n", imp.UniqueToken, err)
 	}
@@ -524,7 +538,6 @@ func DeleteImplant(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Implant and associated commands deleted successfully"})
 }
-
 func DownloadImplant(c *gin.Context) {
 	implantDBUniqueToken := c.Param("implant_id")
 	userID := c.MustGet("user_id").(int)
