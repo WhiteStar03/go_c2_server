@@ -12,8 +12,7 @@ Task scheduling, agent communication, and data persistence via PostgreSQL.
 Containerized
 Each component (frontend, backend, database) runs in its own Docker container for easy scaling and isolation.
 
-Secure by Design
-JWT authentication, TLS termination at the NGINX proxy, and environment-driven secrets.
 
-
+```
 docker-compose up -d
+```
